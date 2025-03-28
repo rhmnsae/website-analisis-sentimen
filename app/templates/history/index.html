@@ -3,278 +3,250 @@
 {% block title %}Riwayat Analisis - Analisis Sentimen X{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold">Riwayat Analisis</h2>
-        <a href="{{ url_for('main.input_data') }}" class="btn btn-primary px-4">
-            <i class="bi bi-plus-lg me-2"></i>Analisis Baru
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <h2 class="card-title mb-0 ms-2">Riwayat Analisis</h2>
+        </div>
+        <a href="{{ url_for('main.input_data') }}" class="btn btn-dark">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Analisis Baru
         </a>
     </div>
-
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body p-0">
-            <!-- Search and Filter section -->
-            <div class="p-3 bg-light border-bottom">
-                <div class="row g-2 align-items-center">
-                    <div class="col-md-6">
-                        <form method="GET" action="{{ url_for('history.index') }}" class="d-flex">
-                            <div class="input-group">
-                                <input type="text" name="search" class="form-control" placeholder="Cari berdasarkan judul..." value="{{ search_query }}">
-                                <button type="submit" class="btn btn-dark">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                    <div class="col-md-3">
-                        <select class="form-select" id="filter-sentiment">
-                            <option value="all">Semua Sentimen</option>
-                            <option value="positive">Dominan Positif</option>
-                            <option value="neutral">Dominan Netral</option>
-                            <option value="negative">Dominan Negatif</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <select class="form-select" id="sort-by">
-                            <option value="date-desc">Terbaru</option>
-                            <option value="date-asc">Terlama</option>
-                            <option value="tweets-desc">Tweet Terbanyak</option>
-                            <option value="title-asc">Judul (A-Z)</option>
-                        </select>
-                    </div>
+    <div class="card-body">
+        <!-- Search and Filter section -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-2">
+                <div class="input-group">
+                    <input type="text" id="search-input" class="form-control" placeholder="Cari berdasarkan judul..." value="{{ search_query }}">
                 </div>
             </div>
-            
-            <!-- Table section -->
-            {% if analyses.items %}
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="sortable" data-sort="title">
-                                    Judul
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10l5 5 5-5"></path></svg>
-                                </th>
-                                <th class="sortable" data-sort="date">
-                                    Tanggal
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10l5 5 5-5"></path></svg>
-                                </th>
-                                <th class="sortable" data-sort="tweets" class="text-center">
-                                    Tweets
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10l5 5 5-5"></path></svg>
-                                </th>
-                                <th>Sentimen</th>
-                                <th>Topik Utama</th>
-                                <th class="text-center">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for analysis in analyses.items %}
-                                <tr class="animate-fade-in">
-                                    <td data-label="Judul">
-                                        <div class="fw-bold text-truncate" style="max-width: 250px;" title="{{ analysis.title }}">
-                                            {{ analysis.title }}
-                                        </div>
-                                        {% if analysis.description %}
-                                            <div class="small text-muted text-truncate" style="max-width: 250px;">
-                                                {{ analysis.description }}
-                                            </div>
-                                        {% endif %}
-                                    </td>
-                                    <td data-label="Tanggal">
-                                        <div>{{ analysis.created_at.strftime('%d %b %Y') }}</div>
-                                        <div class="small text-muted">{{ analysis.created_at.strftime('%H:%M') }}</div>
-                                    </td>
-                                    <td data-label="Tweets" class="text-center">
-                                        <span class="fw-bold">{{ analysis.total_tweets }}</span>
-                                        <span class="badge bg-light text-dark">tweets</span>
-                                    </td>
-                                    <td data-label="Sentimen">
-                                        <div class="d-flex align-items-center">
-                                            <!-- Sentiment distribution bar -->
-                                            <div class="sentiment-bar me-2" style="width: 80px; height: 8px;">
-                                                <div class="d-flex h-100">
-                                                    <div class="bg-success"></div>
-                                                    <div class="bg-warning"></div>
-                                                    <div class="bg-danger"></div>
+            <div class="col-md-3 mb-2">
+                <select class="form-select" id="filter-sentiment">
+                    <option value="all" {% if request.args.get('sentiment', 'all') == 'all' %}selected{% endif %}>Semua Sentimen</option>
+                    <option value="positive" {% if request.args.get('sentiment') == 'positive' %}selected{% endif %}>Dominan Positif</option>
+                    <option value="neutral" {% if request.args.get('sentiment') == 'neutral' %}selected{% endif %}>Dominan Netral</option>
+                    <option value="negative" {% if request.args.get('sentiment') == 'negative' %}selected{% endif %}>Dominan Negatif</option>
+                </select>
+            </div>
+            <div class="col-md-3 mb-2">
+                <select class="form-select" id="sort-by">
+                    <option value="date-desc" {% if request.args.get('sort', 'date-desc') == 'date-desc' %}selected{% endif %}>Terbaru</option>
+                    <option value="date-asc" {% if request.args.get('sort') == 'date-asc' %}selected{% endif %}>Terlama</option>
+                    <option value="tweets-desc" {% if request.args.get('sort') == 'tweets-desc' %}selected{% endif %}>Tweet Terbanyak</option>
+                    <option value="title-asc" {% if request.args.get('sort') == 'title-asc' %}selected{% endif %}>Judul (A-Z)</option>
+                </select>
+            </div>
+            <div class="col-md-3 mb-2">
+                <select class="form-select" id="items-per-page">
+                    <option value="10" {% if request.args.get('per_page', '10') == '10' %}selected{% endif %}>10 entri per halaman</option>
+                    <option value="25" {% if request.args.get('per_page') == '25' %}selected{% endif %}>25 entri per halaman</option>
+                    <option value="50" {% if request.args.get('per_page') == '50' %}selected{% endif %}>50 entri per halaman</option>
+                    <option value="100" {% if request.args.get('per_page') == '100' %}selected{% endif %}>100 entri per halaman</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- Analysis Table -->
+        {% if analyses.items %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Judul</th>
+                            <th>Deskripsi</th>
+                            <th>Tanggal</th>
+                            <th>Tweets</th>
+                            <th>Sentimen</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for analysis in analyses.items %}
+                            <tr class="animate-fade-in">
+                                <td class="fw-bold">{{ analysis.title }}</td>
+                                <td>
+                                    {% if analysis.description %}
+                                        {{ analysis.description }}
+                                    {% else %}
+                                        <span class="text-muted small">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ analysis.created_at.strftime('%d %b %Y') }}<br>
+                                    <small class="text-muted">{{ analysis.created_at.strftime('%H:%M') }}</small>
+                                </td>
+                                <td>{{ analysis.total_tweets }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <span class="badge bg-success me-1">{{ analysis.positive_percent }}%</span>
+                                        <span class="badge bg-warning text-dark me-1">{{ analysis.neutral_percent }}%</span>
+                                        <span class="badge bg-danger">{{ analysis.negative_percent }}%</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('history.view', analysis_id=analysis.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        </a>
+                                        <a href="{{ url_for('analysis.download_report') }}?id={{ analysis.id }}" class="btn btn-sm btn-outline-dark">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal-{{ analysis.id }}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Modal konfirmasi hapus -->
+                                    <div class="modal fade" id="deleteModal-{{ analysis.id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered">
+                                            <div class="modal-content border-0">
+                                                <div class="modal-header border-0">
+                                                    <h5 class="modal-title">Konfirmasi Hapus</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                 </div>
-                                            </div>
-                                            
-                                            <!-- Sentiment percentages -->
-                                            <div class="small">
-                                                <span class="text-success">{{ analysis.positive_percent }}%</span> /
-                                                <span class="text-warning">{{ analysis.neutral_percent }}%</span> /
-                                                <span class="text-danger">{{ analysis.negative_percent }}%</span>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td data-label="Topik">
-                                        {% set topics = namespace(value=[]) %}
-                                        {% if analysis.data and analysis.data.get_data() %}
-                                            {% if analysis.data.get_data().topics %}
-                                                {% for topic in analysis.data.get_data().topics[:2] %}
-                                                    {% set topic_text = topic.topic if topic is mapping else topic %}
-                                                    {% set topics.value = topics.value + [topic_text] %}
-                                                {% endfor %}
-                                            {% endif %}
-                                        {% endif %}
-                                        
-                                        {% if topics.value %}
-                                            {% for topic in topics.value %}
-                                                <span class="badge bg-light text-dark mb-1">{{ topic }}</span>
-                                            {% endfor %}
-                                        {% else %}
-                                            <span class="text-muted small">Tidak tersedia</span>
-                                        {% endif %}
-                                    </td>
-                                    <td data-label="Aksi" class="text-center">
-                                        <div class="btn-group">
-                                            <a href="{{ url_for('history.view', analysis_id=analysis.id) }}" class="btn btn-sm btn-outline-primary" title="Lihat Detail">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                            </a>
-                                            <a href="{{ url_for('analysis.download_report') }}?id={{ analysis.id }}" class="btn btn-sm btn-outline-dark" title="Unduh Laporan">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                                            </a>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal-{{ analysis.id }}" title="Hapus">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                
-                                <!-- Modal konfirmasi hapus -->
-                                <div class="modal fade" id="deleteModal-{{ analysis.id }}" tabindex="-1" aria-hidden="true">
-                                    <div class="modal-dialog modal-dialog-centered">
-                                        <div class="modal-content border-0">
-                                            <div class="modal-header border-0">
-                                                <h5 class="modal-title">Konfirmasi Hapus</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                            </div>
-                                            <div class="modal-body text-center">
-                                                <div class="mb-4">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-danger"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                                                    <h5 class="mt-3">Hapus analisis "{{ analysis.title }}"?</h5>
-                                                    <p class="text-muted">Tindakan ini tidak dapat dibatalkan.</p>
+                                                <div class="modal-body text-center">
+                                                    <div class="mb-4">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-danger"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                                        <h5 class="mt-3">Hapus analisis "{{ analysis.title }}"?</h5>
+                                                        <p class="text-muted">Tindakan ini tidak dapat dibatalkan.</p>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div class="modal-footer border-0">
-                                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                                                <form action="{{ url_for('history.delete', analysis_id=analysis.id) }}" method="POST">
-                                                    <button type="submit" class="btn btn-danger">Hapus</button>
-                                                </form>
+                                                <div class="modal-footer border-0">
+                                                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                                                    <form action="{{ url_for('history.delete', analysis_id=analysis.id) }}" method="POST">
+                                                        <button type="submit" class="btn btn-danger">Hapus</button>
+                                                    </form>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Info dan Pagination -->
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-4">
+                <div class="text-muted small mb-3 mb-md-0">
+                    Menampilkan {{ analyses.items|length }} dari {{ analyses.total }} hasil
                 </div>
                 
-                <!-- Info dan Pagination -->
-                <div class="p-3 border-top d-flex flex-column flex-md-row justify-content-between align-items-center">
-                    <div class="text-muted small mb-3 mb-md-0">
-                        Menampilkan {{ analyses.items|length }} dari {{ analyses.total }} hasil
-                    </div>
-                    
-                    <!-- Pagination (disederhanakan) -->
-                    {% if analyses.pages > 1 %}
-                    <nav aria-label="Navigasi halaman">
-                        <ul class="pagination mb-0">
-                            <li class="page-item {{ 'disabled' if not analyses.has_prev else '' }}">
-                                <a class="page-link" href="{{ url_for('history.index', page=analyses.prev_num, search=search_query) if analyses.has_prev else '#' }}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                                </a>
-                            </li>
-                            
-                            {% for page_num in analyses.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
-                                {% if page_num %}
-                                    <li class="page-item {{ 'active' if page_num == analyses.page else '' }}">
-                                        <a class="page-link" href="{{ url_for('history.index', page=page_num, search=search_query) }}">{{ page_num }}</a>
-                                    </li>
-                                {% else %}
-                                    <li class="page-item disabled"><span class="page-link">...</span></li>
-                                {% endif %}
-                            {% endfor %}
-                            
-                            <li class="page-item {{ 'disabled' if not analyses.has_next else '' }}">
-                                <a class="page-link" href="{{ url_for('history.index', page=analyses.next_num, search=search_query) if analyses.has_next else '#' }}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                                </a>
-                            </li>
-                        </ul>
-                    </nav>
-                    {% endif %}
-                </div>
-            {% else %}
-                <div class="text-center py-5 my-5">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.2;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    <h4 class="mt-3 mb-3">Tidak ada riwayat analisis</h4>
-                    {% if search_query %}
-                        <p class="mb-4">Tidak ada hasil untuk pencarian "{{ search_query }}"</p>
-                        <a href="{{ url_for('history.index') }}" class="btn btn-outline-dark">
-                            Lihat semua riwayat
-                        </a>
-                    {% else %}
-                        <p class="mb-4">Buat analisis baru untuk mulai melihat data di sini</p>
-                        <a href="{{ url_for('main.index') }}" class="btn btn-dark">
-                            Buat Analisis Baru
-                        </a>
-                    {% endif %}
-                </div>
-            {% endif %}
-        </div>
+                <!-- Pagination -->
+                {% if analyses.pages > 1 %}
+                <nav aria-label="Navigasi halaman">
+                    <ul class="pagination mb-0">
+                        <li class="page-item {{ 'disabled' if not analyses.has_prev else '' }}">
+                            <a class="page-link" href="{{ url_for('history.index', page=analyses.prev_num, search=search_query, sentiment=request.args.get('sentiment', 'all'), sort=request.args.get('sort', 'date-desc'), per_page=request.args.get('per_page', '10')) if analyses.has_prev else '#' }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                            </a>
+                        </li>
+                        
+                        {% for page_num in analyses.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
+                            {% if page_num %}
+                                <li class="page-item {{ 'active' if page_num == analyses.page else '' }}">
+                                    <a class="page-link" href="{{ url_for('history.index', page=page_num, search=search_query, sentiment=request.args.get('sentiment', 'all'), sort=request.args.get('sort', 'date-desc'), per_page=request.args.get('per_page', '10')) }}">{{ page_num }}</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        <li class="page-item {{ 'disabled' if not analyses.has_next else '' }}">
+                            <a class="page-link" href="{{ url_for('history.index', page=analyses.next_num, search=search_query, sentiment=request.args.get('sentiment', 'all'), sort=request.args.get('sort', 'date-desc'), per_page=request.args.get('per_page', '10')) if analyses.has_next else '#' }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="text-center py-5 my-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.2;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <h4 class="mt-3 mb-3">Tidak ada riwayat analisis</h4>
+                {% if search_query %}
+                    <p class="mb-4">Tidak ada hasil untuk pencarian "{{ search_query }}"</p>
+                    <a href="{{ url_for('history.index') }}" class="btn btn-outline-dark">
+                        Lihat semua riwayat
+                    </a>
+                {% else %}
+                    <p class="mb-4">Buat analisis baru untuk mulai melihat data di sini</p>
+                    <a href="{{ url_for('main.input_data') }}" class="btn btn-dark">
+                        Buat Analisis Baru
+                    </a>
+                {% endif %}
+            </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Handle clicks on sortable column headers
-        const sortableHeaders = document.querySelectorAll('th.sortable');
-        sortableHeaders.forEach(header => {
-            header.addEventListener('click', function() {
-                const sortField = this.getAttribute('data-sort');
-                const currentDirection = this.getAttribute('data-direction') || 'none';
-                
-                // Reset all headers
-                sortableHeaders.forEach(h => {
-                    h.removeAttribute('data-direction');
-                });
-                
-                // Set new direction
-                let newDirection;
-                if (currentDirection === 'none' || currentDirection === 'desc') {
-                    newDirection = 'asc';
-                } else {
-                    newDirection = 'desc';
-                }
-                
-                this.setAttribute('data-direction', newDirection);
-                
-                // In a real implementation, you would redirect to:
-                // window.location.href = `{{ url_for('history.index') }}?sort=${sortField}&direction=${newDirection}&search={{ search_query }}`;
-            });
-        });
-        
-        // Filter dan sort functionality
+        // Get all filter elements
+        const searchInput = document.getElementById('search-input');
         const filterSentiment = document.getElementById('filter-sentiment');
         const sortBy = document.getElementById('sort-by');
+        const itemsPerPage = document.getElementById('items-per-page');
         
-        // Listen for changes on filter and sort dropdowns
-        [filterSentiment, sortBy].forEach(element => {
-            if (element) {
-                element.addEventListener('change', function() {
-                    // For now, we'll just log the selection
-                    console.log('Filter/sort changed:', this.id, this.value);
-                    
-                    // In a real implementation, you would do:
-                    // const sentiment = filterSentiment.value;
-                    // const sort = sortBy.value;
-                    // window.location.href = `{{ url_for('history.index') }}?sentiment=${sentiment}&sort=${sort}&search={{ search_query }}`;
-                });
+        // Function to navigate with parameters
+        function updateFilters() {
+            const searchValue = searchInput.value.trim();
+            const sentimentValue = filterSentiment.value;
+            const sortValue = sortBy.value;
+            const perPageValue = itemsPerPage.value;
+            
+            // Build URL with current parameters
+            let url = `{{ url_for('history.index') }}?page=1`;
+            
+            if (searchValue) {
+                url += `&search=${encodeURIComponent(searchValue)}`;
             }
-        });
+            
+            if (sentimentValue !== 'all') {
+                url += `&sentiment=${sentimentValue}`;
+            }
+            
+            url += `&sort=${sortValue}`;
+            url += `&per_page=${perPageValue}`;
+            
+            // Navigate to the new URL
+            window.location.href = url;
+        }
+        
+        // Search input with debounce (wait for user to pause typing)
+        let searchTimeout;
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(updateFilters, 500); // 500ms delay
+            });
+            
+            // Also handle enter key
+            searchInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    clearTimeout(searchTimeout);
+                    updateFilters();
+                }
+            });
+        }
+        
+        // Add change listeners to filter dropdowns
+        if (filterSentiment) {
+            filterSentiment.addEventListener('change', updateFilters);
+        }
+        
+        if (sortBy) {
+            sortBy.addEventListener('change', updateFilters);
+        }
+        
+        if (itemsPerPage) {
+            itemsPerPage.addEventListener('change', updateFilters);
+        }
     });
 </script>
 {% endblock %}

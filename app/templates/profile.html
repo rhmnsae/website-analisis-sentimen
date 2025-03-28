@@ -62,51 +62,6 @@
                         </div>
                     </div>
                 </div>
-                
-                <div class="mt-4">
-                    <h4 class="mb-3">Analisis Terbaru</h4>
-                    
-                    {% if current_user.analyses %}
-                        <div class="list-group">
-                            {% set recent_analyses = current_user.analyses|sort(attribute='created_at', reverse=True) %}
-                            {% for analysis in recent_analyses %}
-                                {% if loop.index <= 5 %}
-                                    <a href="{{ url_for('history.view', analysis_id=analysis.id) }}" class="list-group-item list-group-item-action animate-fade-in delay-{{ loop.index0 if loop.index0 < 10 else '9' }}">
-                                        <div class="d-flex w-100 justify-content-between">
-                                            <h5 class="mb-1">{{ analysis.title }}</h5>
-                                            <small>{{ analysis.created_at.strftime('%d %b %Y') }}</small>
-                                        </div>
-                                        <div class="d-flex align-items-center mt-2">
-                                            <span class="badge bg-success me-1">{{ analysis.positive_percent }}%</span>
-                                            <span class="badge bg-warning me-1">{{ analysis.neutral_percent }}%</span>
-                                            <span class="badge bg-danger me-1">{{ analysis.negative_percent }}%</span>
-                                            <span class="ms-2">{{ analysis.total_tweets }} tweets</span>
-                                        </div>
-                                    </a>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                        
-                        {% if current_user.analyses|length > 5 %}
-                            <div class="text-center mt-3">
-                                <a href="{{ url_for('history.index') }}" class="btn btn-outline-dark">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                                    Lihat Semua Riwayat
-                                </a>
-                            </div>
-                        {% endif %}
-                    {% else %}
-                        <div class="text-center py-4 bg-light rounded">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-3 text-muted"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                            <h5 class="text-muted">Belum ada analisis</h5>
-                            <p>Mulai dengan menganalisis data X Anda</p>
-                            <a href="{{ url_for('main.index') }}" class="btn btn-dark mt-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                Buat Analisis Baru
-                            </a>
-                        </div>
-                    {% endif %}
-                </div>
             </div>
         </div>
     </div>
