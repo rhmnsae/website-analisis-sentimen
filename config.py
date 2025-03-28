@@ -10,3 +10,7 @@ class Config:
     SESSION_USE_SIGNER = True
     MODEL_PATH = os.path.join(MODEL_FOLDER, 'indobert_sentiment_best.pt')
     GEMINI_API_KEY = "AIzaSyCYPhQCDxpyz_MmR86v43XgKvMryx5FfQY"
+    
+    # Database configuration
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(os.getcwd(), 'app.db')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False

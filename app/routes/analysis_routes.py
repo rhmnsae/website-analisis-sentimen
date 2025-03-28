@@ -1,10 +1,13 @@
+import json
 import os
 import pandas as pd
 from flask import Blueprint, current_app, flash, redirect, request, jsonify, send_file, session, url_for
+from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from app.services.sentiment_analysis import predict_sentiments, extract_hashtags, extract_topics
 from app.services.sentiment_analysis import analyze_sentiment_per_hashtag, get_top_users, extract_words_by_sentiment
 from app.services.visualization import create_sentiment_plot, create_improved_word_cloud
+from app.models.database import db, Analysis, AnalysisData
 from datetime import datetime
 from io import BytesIO
 from reportlab.lib.pagesizes import A4
@@ -27,6 +30,7 @@ def clean_for_json(value):
     return value
 
 @analysis_bp.route('/upload', methods=['POST'])
+@login_required
 def upload_file():
     # Verifikasi model terlatih ada
     if not os.path.exists(current_app.config['MODEL_PATH']):
@@ -166,6 +170,33 @@ def upload_file():
                 'top_topics': [t['topic'] for t in topics[:5]]
             }
             
+            # Simpan analisis ke database
+            new_analysis = Analysis(
+                title=title,
+                description=description,
+                total_tweets=total_tweets,
+                positive_count=positive_count,
+                neutral_count=neutral_count,
+                negative_count=negative_count,
+                positive_percent=analysis_results['positive_percent'],
+                neutral_percent=analysis_results['neutral_percent'],
+                negative_percent=analysis_results['negative_percent'],
+                user_id=current_user.id
+            )
+            
+            db.session.add(new_analysis)
+            db.session.flush()  # Get the ID without committing
+            
+            # Simpan data analisis detail
+            analysis_data = AnalysisData(
+                analysis_id=new_analysis.id,
+                data_json=json.dumps(analysis_results),
+                file_path=output_file
+            )
+            
+            db.session.add(analysis_data)
+            db.session.commit()
+            
             return jsonify(analysis_results)
         except Exception as e:
             import traceback
@@ -173,6 +204,7 @@ def upload_file():
             return jsonify({'error': str(e)})
 
 @analysis_bp.route('/filter_tweets', methods=['POST'])
+@login_required
 def filter_tweets():
     data = request.json
     sentiment_filter = data.get('sentiment', 'all')
@@ -213,6 +245,7 @@ def filter_tweets():
     return jsonify({'tweets': tweets_for_display})
 
 @analysis_bp.route('/download_report', methods=['GET'])
+@login_required
 def download_report():
     # Cek apakah ada data analisis di session
     if 'analysis_file' not in session or 'analysis_context' not in session:

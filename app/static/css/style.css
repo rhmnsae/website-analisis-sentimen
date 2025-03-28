@@ -1348,3 +1348,52 @@ footer h5 svg {
     margin: 2rem 0;
     animation: fadeIn 0.5s ease;
 }
+
+/* Animation delays - increments of 0.05s */
+.anim-delay-0 { animation-delay: 0s !important; }
+.anim-delay-1 { animation-delay: 0.05s !important; }
+.anim-delay-2 { animation-delay: 0.1s !important; }
+.anim-delay-3 { animation-delay: 0.15s !important; }
+.anim-delay-4 { animation-delay: 0.2s !important; }
+.anim-delay-5 { animation-delay: 0.25s !important; }
+.anim-delay-6 { animation-delay: 0.3s !important; }
+.anim-delay-7 { animation-delay: 0.35s !important; }
+.anim-delay-8 { animation-delay: 0.4s !important; }
+.anim-delay-9 { animation-delay: 0.45s !important; }
+.anim-delay-10 { animation-delay: 0.5s !important; }
+.anim-delay-11 { animation-delay: 0.55s !important; }
+.anim-delay-12 { animation-delay: 0.6s !important; }
+.anim-delay-13 { animation-delay: 0.65s !important; }
+.anim-delay-14 { animation-delay: 0.7s !important; }
+.anim-delay-15 { animation-delay: 0.75s !important; }
+.anim-delay-16 { animation-delay: 0.8s !important; }
+.anim-delay-17 { animation-delay: 0.85s !important; }
+.anim-delay-18 { animation-delay: 0.9s !important; }
+.anim-delay-19 { animation-delay: 0.95s !important; }
+.anim-delay-20 { animation-delay: 1s !important; }
+
+/* Tambahkan ini ke app/static/css/style.css */
+.delay-0 { animation-delay: 0s; }
+.delay-1 { animation-delay: 0.05s; }
+.delay-2 { animation-delay: 0.1s; }
+.delay-3 { animation-delay: 0.15s; }
+.delay-4 { animation-delay: 0.2s; }
+.delay-5 { animation-delay: 0.25s; }
+.delay-6 { animation-delay: 0.3s; }
+.delay-7 { animation-delay: 0.35s; }
+.delay-8 { animation-delay: 0.4s; }
+.delay-9 { animation-delay: 0.45s; }
+/* Tambahkan lebih banyak jika diperlukan */
+
+/* Animation delays - increments of 0.1s (untuk kasus lain) */
+.delay-0 { animation-delay: 0s !important; }
+.delay-1 { animation-delay: 0.1s !important; }
+.delay-2 { animation-delay: 0.2s !important; }
+.delay-3 { animation-delay: 0.3s !important; }
+.delay-4 { animation-delay: 0.4s !important; }
+.delay-5 { animation-delay: 0.5s !important; }
+.delay-6 { animation-delay: 0.6s !important; }
+.delay-7 { animation-delay: 0.7s !important; }
+.delay-8 { animation-delay: 0.8s !important; }
+.delay-9 { animation-delay: 0.9s !important; }
+.delay-10 { animation-delay: 1s !important; }

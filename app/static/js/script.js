@@ -69,19 +69,24 @@ document.addEventListener('DOMContentLoaded', function() {
     let negativeWordsChart = null;
     
     // Initialize Charts.js with global defaults
-    Chart.defaults.font.family = "'Inter', sans-serif";
-    Chart.defaults.color = '#333333';
-    Chart.defaults.plugins.legend.labels.usePointStyle = true;
-    Chart.defaults.plugins.tooltip.padding = 10;
-    Chart.defaults.plugins.tooltip.cornerRadius = 6;
-    Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-    Chart.defaults.animation.duration = 1000;
-    Chart.defaults.animation.easing = 'easeOutQuart';
+    if (typeof Chart !== 'undefined') {
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.color = '#333333';
+        Chart.defaults.plugins.legend.labels.usePointStyle = true;
+        Chart.defaults.plugins.tooltip.padding = 10;
+        Chart.defaults.plugins.tooltip.cornerRadius = 6;
+        Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        Chart.defaults.animation.duration = 1000;
+        Chart.defaults.animation.easing = 'easeOutQuart';
+    }
     
     // Main tab navigation handling
     navLinks.forEach(link => {
         link.addEventListener('click', function(e) {
-            e.preventDefault();
+            // Jika tidak ada href, prevent default behavior
+            if (!this.getAttribute('href') || this.getAttribute('href') === '#' || this.getAttribute('href') === '#main-content') {
+                e.preventDefault();
+            }
             
             // Jika tab dinonaktifkan, tampilkan peringatan dan hentikan
             if (this.classList.contains('disabled')) {
@@ -91,6 +96,17 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const targetId = this.getAttribute('data-tab');
             
+            // Jika targetId tidak ada, ini mungkin link ke halaman lain seperti profile atau logout
+            if (!targetId) {
+                return;
+            }
+            
+            // Jika kita beralih ke tab seperti 'history' yang memerlukan reload
+            if (targetId === 'history') {
+                // Biarkan link berpindah halaman normal
+                return;
+            }
+            
             // Remove active class from all links and content
             navLinks.forEach(l => l.classList.remove('active'));
             mainTabContent.forEach(c => c.classList.remove('active'));
@@ -99,8 +115,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // Add active class to clicked link and show corresponding content
             this.classList.add('active');
             const targetContent = document.getElementById(targetId);
-            targetContent.classList.add('active');
-            targetContent.classList.remove('d-none');
+            if (targetContent) {
+                targetContent.classList.add('active');
+                targetContent.classList.remove('d-none');
+            }
         });
     });
     
@@ -116,7 +134,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Get form data
             const formData = new FormData();
             formData.append('title', document.getElementById('title').value);
-            formData.append('description', ''); // Removed description field
+            formData.append('description', document.getElementById('description')?.value || '');
             formData.append('csv-file', document.getElementById('csv-file').files[0]);
             
             // Send to server
@@ -145,13 +163,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('evaluation').classList.remove('d-none');
                 
                 // Enable previously disabled tabs
-                document.querySelector('[data-tab="results"]').classList.remove('disabled');
-                document.querySelector('[data-tab="evaluation"]').classList.remove('disabled');
-                document.getElementById('download-report-btn').classList.remove('disabled');
+                const resultsTab = document.querySelector('[data-tab="results"]');
+                const evaluationTab = document.querySelector('[data-tab="evaluation"]');
+                const downloadReportLink = document.getElementById('download-report-btn');
+                
+                if (resultsTab) resultsTab.classList.remove('disabled');
+                if (evaluationTab) evaluationTab.classList.remove('disabled');
+                if (downloadReportLink) downloadReportLink.classList.remove('disabled');
                 
                 // Update navigation
                 navLinks.forEach(l => l.classList.remove('active'));
-                document.querySelector('[data-tab="results"]').classList.add('active');
+                if (resultsTab) resultsTab.classList.add('active');
                 
                 // Update UI with analysis results
                 updateAnalysisResults(data);
@@ -164,6 +186,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Create word cloud (now in Analisis Kata tab)
                 createImprovedWordCloud(data);
+                
+                // Refresh page after a small delay to update navigation status
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
             })
             .catch(error => {
                 loadingIndicator.classList.add('d-none');
@@ -260,6 +287,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Update pagination controls
     function updatePagination() {
+        if (!paginationContainer) return;
+        
         const totalPages = Math.ceil(filteredTweets.length / tweetsPerPage);
         
         // Adjust current page if needed
@@ -358,6 +387,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Display tweets for current page
     function displayTweets() {
         const tweetContainer = document.getElementById('tweet-container');
+        if (!tweetContainer) return;
+        
         tweetContainer.innerHTML = '';
         
         if (!filteredTweets || filteredTweets.length === 0) {
@@ -512,15 +543,16 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add from hashtags
         if (data.top_hashtags && data.top_hashtags.length > 0) {
             data.top_hashtags.slice(0, 7).forEach(hashtag => {
-                const topic = hashtag.tag.replace('#', '');
-                topics.add(topic);
+                const topic = hashtag.tag ? hashtag.tag.replace('#', '') : (typeof hashtag === 'string' ? hashtag.replace('#', '') : '');
+                if (topic) topics.add(topic);
             });
         }
         
         // Add from topics
         if (data.topics && data.topics.length > 0) {
             data.topics.slice(0, 7).forEach(topic => {
-                topics.add(topic.topic);
+                const topicText = typeof topic === 'object' ? topic.topic : topic;
+                if (topicText) topics.add(topicText);
             });
         }
         
@@ -529,8 +561,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // Add top positive words
             if (data.sentiment_words.positive && data.sentiment_words.positive.length > 0) {
                 data.sentiment_words.positive.slice(0, 3).forEach(item => {
-                    if (item.word && item.word.length > 3) {
-                        topics.add(item.word);
+                    const word = typeof item === 'object' ? item.word : item;
+                    if (word && word.length > 3) {
+                        topics.add(word);
                     }
                 });
             }
@@ -538,8 +571,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // Add top negative words
             if (data.sentiment_words.negative && data.sentiment_words.negative.length > 0) {
                 data.sentiment_words.negative.slice(0, 3).forEach(item => {
-                    if (item.word && item.word.length > 3) {
-                        topics.add(item.word);
+                    const word = typeof item === 'object' ? item.word : item;
+                    if (word && word.length > 3) {
+                        topics.add(word);
                     }
                 });
             }
@@ -579,6 +613,12 @@ document.addEventListener('DOMContentLoaded', function() {
     function createImprovedWordCloud(data) {
         const wordCloudContainer = document.getElementById('word-cloud-container');
         if (!wordCloudContainer || !data || !data.tweets || data.tweets.length === 0) return;
+        
+        // If data already contains a word_cloud, use it
+        if (data.word_cloud) {
+            wordCloudContainer.innerHTML = `<img src="data:image/png;base64,${data.word_cloud}" alt="Word Cloud" class="img-fluid">`;
+            return;
+        }
         
         // Add loading indicator
         wordCloudContainer.innerHTML = '<div class="chart-loader"><div class="spinner"></div></div>';
@@ -654,6 +694,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const intensity = Math.round((word.value - minCount) / (maxCount - minCount) * 200);
             word.color = `rgb(${intensity}, ${intensity}, ${intensity})`;
         });
+        
+        // Check if d3 is available
+        if (typeof d3 === 'undefined') {
+            // Fallback to simple word display if d3 is not available
+            renderWordCloudFallback(wordsArray, wordCloudContainer);
+            return;
+        }
         
         // Create SVG element
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -731,214 +778,296 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error("Error creating word cloud:", error);
             // Fallback to simple word display
-            wordCloudContainer.innerHTML = '';
-            
-            const wordCloudFallback = document.createElement('div');
-            wordCloudFallback.className = 'd-flex flex-wrap justify-content-center align-items-center h-100';
-            
-            wordsArray.slice(0, 50).forEach((word, index) => {
-                const wordSpan = document.createElement('span');
-                wordSpan.textContent = word.text;
-                wordSpan.style.fontSize = `${word.size / 10}rem`;
-                wordSpan.style.fontWeight = Math.min(900, 300 + Math.floor(word.size * 10));
-                wordSpan.style.color = word.color;
-                wordSpan.style.padding = '5px';
-                wordSpan.style.display = 'inline-block';
-                wordSpan.style.transition = 'all 0.3s ease';
-                wordSpan.style.opacity = 0;
-                wordSpan.style.transform = 'translateY(20px)';
-                
-                wordSpan.addEventListener('mouseover', function() {
-                    this.style.transform = 'scale(1.2)';
-                    this.style.color = '#000000';
-                });
-                
-                wordSpan.addEventListener('mouseout', function() {
-                    this.style.transform = 'scale(1)';
-                    this.style.color = word.color;
-                });
-                
-                wordCloudFallback.appendChild(wordSpan);
-                
-                // Animate entrance with delay based on index
-                setTimeout(() => {
-                    wordSpan.style.opacity = 1;
-                    wordSpan.style.transform = 'translateY(0)';
-                }, 50 * index);
-            });
-            
-            wordCloudContainer.appendChild(wordCloudFallback);
+            renderWordCloudFallback(wordsArray, wordCloudContainer);
         }
     }
     
+    // Simple fallback for word cloud when d3 is not available
+    function renderWordCloudFallback(wordsArray, container) {
+        container.innerHTML = '';
+        
+        const wordCloudFallback = document.createElement('div');
+        wordCloudFallback.className = 'd-flex flex-wrap justify-content-center align-items-center h-100';
+        
+        wordsArray.slice(0, 50).forEach((word, index) => {
+            const wordSpan = document.createElement('span');
+            wordSpan.textContent = word.text;
+            wordSpan.style.fontSize = `${word.size / 10}rem`;
+            wordSpan.style.fontWeight = Math.min(900, 300 + Math.floor(word.size * 10));
+            wordSpan.style.color = word.color;
+            wordSpan.style.padding = '5px';
+            wordSpan.style.display = 'inline-block';
+            wordSpan.style.transition = 'all 0.3s ease';
+            wordSpan.style.opacity = 0;
+            wordSpan.style.transform = 'translateY(20px)';
+            
+            wordSpan.addEventListener('mouseover', function() {
+                this.style.transform = 'scale(1.2)';
+                this.style.color = '#000000';
+            });
+            
+            wordSpan.addEventListener('mouseout', function() {
+                this.style.transform = 'scale(1)';
+                this.style.color = word.color;
+            });
+            
+            wordCloudFallback.appendChild(wordSpan);
+            
+            // Animate entrance with delay based on index
+            setTimeout(() => {
+                wordSpan.style.opacity = 1;
+                wordSpan.style.transform = 'translateY(0)';
+            }, 50 * index);
+        });
+        
+        container.appendChild(wordCloudFallback);
+    }
+    
     // Function to update analysis results in UI
-    function updateAnalysisResults(data) {
+    window.updateAnalysisResults = function(data) {
         // Update title and description
-        document.getElementById('title-placeholder').textContent = data.title;
+        const titleElement = document.getElementById('title-placeholder');
+        if (titleElement) titleElement.textContent = data.title;
         
         // Update counts and percentages
-        document.getElementById('total-tweets').textContent = data.total_tweets;
-        document.getElementById('positive-count').textContent = data.positive_count;
-        document.getElementById('neutral-count').textContent = data.neutral_count;
-        document.getElementById('negative-count').textContent = data.negative_count;
+        const totalTweetsElement = document.getElementById('total-tweets');
+        const positiveCountElement = document.getElementById('positive-count');
+        const neutralCountElement = document.getElementById('neutral-count');
+        const negativeCountElement = document.getElementById('negative-count');
         
-        document.getElementById('positive-percent').textContent = data.positive_percent + '%';
-        document.getElementById('neutral-percent').textContent = data.neutral_percent + '%';
-        document.getElementById('negative-percent').textContent = data.negative_percent + '%';
+        const positivePercentElement = document.getElementById('positive-percent');
+        const neutralPercentElement = document.getElementById('neutral-percent');
+        const negativePercentElement = document.getElementById('negative-percent');
+        
+        if (totalTweetsElement) totalTweetsElement.textContent = data.total_tweets;
+        if (positiveCountElement) positiveCountElement.textContent = data.positive_count;
+        if (neutralCountElement) neutralCountElement.textContent = data.neutral_count;
+        if (negativeCountElement) negativeCountElement.textContent = data.negative_count;
+        
+        if (positivePercentElement) positivePercentElement.textContent = data.positive_percent + '%';
+        if (neutralPercentElement) neutralPercentElement.textContent = data.neutral_percent + '%';
+        if (negativePercentElement) negativePercentElement.textContent = data.negative_percent + '%';
         
         // Update sentiment distribution with animation
         const positiveSegment = document.getElementById('positive-segment');
         const neutralSegment = document.getElementById('neutral-segment');
         const negativeSegment = document.getElementById('negative-segment');
         
-        // Reset widths first
-        positiveSegment.style.width = '0%';
-        neutralSegment.style.width = '0%';
-        negativeSegment.style.width = '0%';
-        
-        // Then animate to new values
-        setTimeout(() => {
-            positiveSegment.style.width = data.positive_percent + '%';
-            positiveSegment.textContent = data.positive_percent + '%';
-            neutralSegment.style.width = data.neutral_percent + '%';
-            neutralSegment.textContent = data.neutral_percent + '%';
-            negativeSegment.style.width = data.negative_percent + '%';
-            negativeSegment.textContent = data.negative_percent + '%';
-        }, 100);
+        if (positiveSegment && neutralSegment && negativeSegment) {
+            // Reset widths first
+            positiveSegment.style.width = '0%';
+            neutralSegment.style.width = '0%';
+            negativeSegment.style.width = '0%';
+            
+            // Then animate to new values
+            setTimeout(() => {
+                positiveSegment.style.width = data.positive_percent + '%';
+                positiveSegment.textContent = data.positive_percent + '%';
+                neutralSegment.style.width = data.neutral_percent + '%';
+                neutralSegment.textContent = data.neutral_percent + '%';
+                negativeSegment.style.width = data.negative_percent + '%';
+                negativeSegment.textContent = data.negative_percent + '%';
+            }, 100);
+        }
         
         // Make sure the stats cards have appropriate classes and icons
         const positiveStats = document.getElementById('positive-stats');
         const neutralStats = document.getElementById('neutral-stats');
         const negativeStats = document.getElementById('negative-stats');
         
-        positiveStats.className = 'stats-card positive animate-fade-in';
-        positiveStats.querySelector('.icon').innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>';
+        if (positiveStats) {
+            positiveStats.className = 'stats-card positive animate-fade-in';
+            const iconElement = positiveStats.querySelector('.icon');
+            if (iconElement) {
+                iconElement.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>';
+            }
+        }
         
-        neutralStats.className = 'stats-card neutral animate-fade-in';
-        neutralStats.querySelector('.icon').innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
+        if (neutralStats) {
+            neutralStats.className = 'stats-card neutral animate-fade-in';
+            const iconElement = neutralStats.querySelector('.icon');
+            if (iconElement) {
+                iconElement.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
+            }
+        }
         
-        negativeStats.className = 'stats-card negative animate-fade-in';
-        negativeStats.querySelector('.icon').innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path></svg>';
+        if (negativeStats) {
+            negativeStats.className = 'stats-card negative animate-fade-in';
+            const iconElement = negativeStats.querySelector('.icon');
+            if (iconElement) {
+                iconElement.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path></svg>';
+            }
+        }
         
         // Update top hashtags with animation
         const topHashtags = document.getElementById('top-hashtags');
-        topHashtags.innerHTML = '';
-        
-        data.top_hashtags.forEach((hashtag, index) => {
-            const tag = document.createElement('div');
-            tag.className = 'tag animate-fade-in';
-            tag.style.animationDelay = `${index * 0.1}s`;
-            tag.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16"></path><path d="M4 15h16"></path><path d="M10 3L8 21"></path><path d="M16 3l-2 18"></path></svg> ${hashtag.tag} (${hashtag.count})`;
-            topHashtags.appendChild(tag);
-        });
+        if (topHashtags) {
+            topHashtags.innerHTML = '';
+            
+            if (data.top_hashtags && data.top_hashtags.length > 0) {
+                data.top_hashtags.forEach((hashtag, index) => {
+                    const tag = document.createElement('div');
+                    tag.className = 'tag animate-fade-in';
+                    tag.style.animationDelay = `${index * 0.1}s`;
+                    
+                    const tagText = hashtag.tag ? hashtag.tag : (typeof hashtag === 'string' ? hashtag : '');
+                    const count = hashtag.count ? hashtag.count : '';
+                    
+                    tag.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16"></path><path d="M4 15h16"></path><path d="M10 3L8 21"></path><path d="M16 3l-2 18"></path></svg> ${tagText} ${count ? `(${count})` : ''}`;
+                    topHashtags.appendChild(tag);
+                });
+            }
+        }
         
         // Update all hashtags
         const allHashtags = document.getElementById('all-hashtags');
-        allHashtags.innerHTML = '';
-        
-        data.top_hashtags.forEach((hashtag, index) => {
-            const tag = document.createElement('div');
-            tag.className = 'tag animate-fade-in';
-            tag.style.animationDelay = `${index * 0.05}s`;
-            tag.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16"></path><path d="M4 15h16"></path><path d="M10 3L8 21"></path><path d="M16 3l-2 18"></path></svg> ${hashtag.tag} (${hashtag.count})`;
-            allHashtags.appendChild(tag);
-        });
+        if (allHashtags) {
+            allHashtags.innerHTML = '';
+            
+            if (data.top_hashtags && data.top_hashtags.length > 0) {
+                data.top_hashtags.forEach((hashtag, index) => {
+                    const tag = document.createElement('div');
+                    tag.className = 'tag animate-fade-in';
+                    tag.style.animationDelay = `${index * 0.05}s`;
+                    
+                    const tagText = hashtag.tag ? hashtag.tag : (typeof hashtag === 'string' ? hashtag : '');
+                    const count = hashtag.count ? hashtag.count : '';
+                    
+                    tag.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16"></path><path d="M4 15h16"></path><path d="M10 3L8 21"></path><path d="M16 3l-2 18"></path></svg> ${tagText} ${count ? `(${count})` : ''}`;
+                    allHashtags.appendChild(tag);
+                });
+            }
+        }
         
         // Update top users
         const topUsers = document.getElementById('top-users');
-        topUsers.innerHTML = '';
-        
-        data.top_users.forEach(user => {
-            const row = document.createElement('tr');
-            row.className = 'animate-fade-in';
+        if (topUsers) {
+            topUsers.innerHTML = '';
             
-            const sentimentClass = user.dominant_sentiment === 'Positif' ? 'sentiment-positive' : 
-                                  user.dominant_sentiment === 'Netral' ? 'sentiment-neutral' : 'sentiment-negative';
-            
-            row.innerHTML = `
-                <td><a href="https://twitter.com/${user.username}" target="_blank">@${user.username}</a></td>
-                <td>${user.count}</td>
-                <td>${Math.round(user.avg_engagement)}</td>
-                <td><span class="${sentimentClass}">${user.dominant_sentiment}</span></td>
-            `;
-            
-            topUsers.appendChild(row);
-        });
+            if (data.top_users && data.top_users.length > 0) {
+                data.top_users.forEach(user => {
+                    const row = document.createElement('tr');
+                    row.className = 'animate-fade-in';
+                    
+                    const sentimentClass = user.dominant_sentiment === 'Positif' ? 'sentiment-positive' : 
+                                          user.dominant_sentiment === 'Netral' ? 'sentiment-neutral' : 'sentiment-negative';
+                    
+                    row.innerHTML = `
+                        <td><a href="https://twitter.com/${user.username}" target="_blank">@${user.username}</a></td>
+                        <td>${user.count}</td>
+                        <td>${Math.round(user.avg_engagement)}</td>
+                        <td><span class="${sentimentClass}">${user.dominant_sentiment}</span></td>
+                    `;
+                    
+                    topUsers.appendChild(row);
+                });
+            }
+        }
         
         // Update main topics
         const mainTopics = document.getElementById('main-topics');
-        mainTopics.innerHTML = '';
+        if (mainTopics) {
+            mainTopics.innerHTML = '';
+            
+            if (data.topics && data.topics.length > 0) {
+                data.topics.forEach((topic, index) => {
+                    const row = document.createElement('tr');
+                    row.className = 'animate-fade-in';
+                    row.style.animationDelay = `${index * 0.1}s`;
+                    
+                    const topicText = typeof topic === 'object' ? topic.topic : topic;
+                    const frequency = typeof topic === 'object' ? topic.frequency : '';
+                    
+                    row.innerHTML = `
+                        <td>${topicText}</td>
+                        <td>${frequency}</td>
+                    `;
+                    
+                    mainTopics.appendChild(row);
+                });
+            }
+        }
         
-        data.topics.forEach((topic, index) => {
-            const row = document.createElement('tr');
-            row.className = 'animate-fade-in';
-            row.style.animationDelay = `${index * 0.1}s`;
-            
-            row.innerHTML = `
-                <td>${topic.topic}</td>
-                <td>${topic.frequency}</td>
-            `;
-            
-            mainTopics.appendChild(row);
-        });
-
-
-        // Update main topics
+        // Update topics in topik-utama
         const topikUtama = document.getElementById('topik-utama');
-        topikUtama.innerHTML = '';
-        
-        data.topics.forEach((topic, index) => {
-            const row = document.createElement('tr');
-            row.className = 'animate-fade-in';
-            row.style.animationDelay = `${index * 0.1}s`;
+        if (topikUtama) {
+            topikUtama.innerHTML = '';
             
-            row.innerHTML = `
-                <td>${topic.topic}</td>
-                <td>${topic.frequency}</td>
-            `;
-            
-            topikUtama.appendChild(row);
-        });
+            if (data.topics && data.topics.length > 0) {
+                data.topics.forEach((topic, index) => {
+                    const row = document.createElement('tr');
+                    row.className = 'animate-fade-in';
+                    row.style.animationDelay = `${index * 0.1}s`;
+                    
+                    const topicText = typeof topic === 'object' ? topic.topic : topic;
+                    const frequency = typeof topic === 'object' ? topic.frequency : '';
+                    
+                    row.innerHTML = `
+                        <td>${topicText}</td>
+                        <td>${frequency}</td>
+                    `;
+                    
+                    topikUtama.appendChild(row);
+                });
+            }
+        }
         
         // Update hashtag sentiment
         const hashtagSentiment = document.getElementById('hashtag-sentiment');
-        hashtagSentiment.innerHTML = '';
-        
-        data.hashtag_sentiment.forEach((stat, index) => {
-            const row = document.createElement('tr');
-            row.className = 'animate-fade-in';
-            row.style.animationDelay = `${index * 0.1}s`;
+        if (hashtagSentiment) {
+            hashtagSentiment.innerHTML = '';
             
-            row.innerHTML = `
-                <td>${stat.tag}</td>
-                <td>${stat.positive}%</td>
-                <td>${stat.neutral}%</td>
-                <td>${stat.negative}%</td>
-                <td>${stat.total}</td>
-            `;
-            
-            hashtagSentiment.appendChild(row);
-        });
+            if (data.hashtag_sentiment && data.hashtag_sentiment.length > 0) {
+                data.hashtag_sentiment.forEach((stat, index) => {
+                    const row = document.createElement('tr');
+                    row.className = 'animate-fade-in';
+                    row.style.animationDelay = `${index * 0.1}s`;
+                    
+                    row.innerHTML = `
+                        <td>${stat.tag}</td>
+                        <td>${stat.positive}%</td>
+                        <td>${stat.neutral}%</td>
+                        <td>${stat.negative}%</td>
+                        <td>${stat.total}</td>
+                    `;
+                    
+                    hashtagSentiment.appendChild(row);
+                });
+            }
+        }
         
         // Initialize data for charts
-        createSentimentByHashtagChart(data.hashtag_sentiment);
-        createSentimentByLocationChart(data.tweets);
-        createSentimentByLanguageChart(data.tweets);
-        createTopWordsCharts(data.sentiment_words);
+        if (typeof Chart !== 'undefined') {
+            if (data.hashtag_sentiment) createSentimentByHashtagChart(data.hashtag_sentiment);
+            if (data.tweets) createSentimentByLocationChart(data.tweets);
+            if (data.tweets) createSentimentByLanguageChart(data.tweets);
+            if (data.sentiment_words) createTopWordsCharts(data.sentiment_words);
+        }
         
         // Update sentiment plot
-        if (data.sentiment_plot) {
-            const sentimentPlot = document.getElementById('sentiment-plot');
-            sentimentPlot.src = 'data:image/png;base64,' + data.sentiment_plot;
-            sentimentPlot.classList.remove('d-none');
-            sentimentPlot.classList.add('animate-fade-in');
-        } else {
-            document.getElementById('sentiment-plot').classList.add('d-none');
+        const sentimentPlot = document.getElementById('sentiment-plot');
+        if (sentimentPlot) {
+            if (data.sentiment_plot) {
+                sentimentPlot.src = 'data:image/png;base64,' + data.sentiment_plot;
+                sentimentPlot.classList.remove('d-none');
+                sentimentPlot.classList.add('animate-fade-in');
+            } else {
+                sentimentPlot.classList.add('d-none');
+            }
         }
-
+        
         // Initialize the welcome message in chatbot
         initializeChatbot(data);
-    }
+        
+        // Store global analysis results
+        analysisResults = data;
+        allTweets = data.tweets || [];
+        
+        // Initialize pagination if we have tweets
+        if (allTweets.length > 0) {
+            initializePagination();
+        }
+    };
     
     // Initialize chatbot with welcome message
     function initializeChatbot(data) {
@@ -1462,7 +1591,16 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Prepare data for chart
         const wordsArray = wordFrequencies
-            .map(item => ({ word: item.word, count: item.count }))
+            .map(item => {
+                if (typeof item === 'object' && item.word && item.count !== undefined) {
+                    return { word: item.word, count: item.count };
+                } else if (typeof item === 'string') {
+                    return { word: item, count: 1 }; // Default count if only string is provided
+                } else {
+                    return null;
+                }
+            })
+            .filter(item => item !== null) // Filter out any nulls
             .sort((a, b) => b.count - a.count)
             .slice(0, 10);
         
