@@ -43,3 +43,6 @@ ENV/
 # OS specific files
 .DS_Store
 Thumbs.db
+
+#db
+app.db
