@@ -6,7 +6,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Main tab navigation
     const navLinks = document.querySelectorAll('.nav-tabs-link');
-    const mainTabContent = document.querySelectorAll('.main-tab-content');
     
     // Chatbot elements
     const chatbotInput = document.getElementById('chatbot-input');
@@ -80,47 +79,38 @@ document.addEventListener('DOMContentLoaded', function() {
         Chart.defaults.animation.easing = 'easeOutQuart';
     }
     
-    // Main tab navigation handling
-    navLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-            // Jika tidak ada href, prevent default behavior
-            if (!this.getAttribute('href') || this.getAttribute('href') === '#' || this.getAttribute('href') === '#main-content') {
-                e.preventDefault();
-            }
-            
-            // Jika tab dinonaktifkan, tampilkan peringatan dan hentikan
-            if (this.classList.contains('disabled')) {
-                showAlert('Silakan upload dan analisis data terlebih dahulu', 'warning');
-                return;
-            }
-            
-            const targetId = this.getAttribute('data-tab');
-            
-            // Jika targetId tidak ada, ini mungkin link ke halaman lain seperti profile atau logout
-            if (!targetId) {
-                return;
-            }
-            
-            // Jika kita beralih ke tab seperti 'history' yang memerlukan reload
-            if (targetId === 'history') {
-                // Biarkan link berpindah halaman normal
-                return;
-            }
-            
-            // Remove active class from all links and content
-            navLinks.forEach(l => l.classList.remove('active'));
-            mainTabContent.forEach(c => c.classList.remove('active'));
-            mainTabContent.forEach(c => c.classList.add('d-none'));
-            
-            // Add active class to clicked link and show corresponding content
-            this.classList.add('active');
-            const targetContent = document.getElementById(targetId);
-            if (targetContent) {
-                targetContent.classList.add('active');
-                targetContent.classList.remove('d-none');
-            }
-        });
-    });
+    // Cek pada halaman hasil-analisis, ambil data analisis dari API
+    if (window.location.pathname === '/hasil-analisis') {
+        // Fetch analysis data
+        fetch('/api/analysis-data')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Gagal mengambil data analisis');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Store global analysis results
+                analysisResults = data;
+                allTweets = data.tweets || [];
+                
+                // Update UI with analysis results
+                updateAnalysisResults(data);
+                
+                // Initialize pagination
+                initializePagination();
+                
+                // Generate topics automatically
+                generateTopics(data);
+                
+                // Create word cloud
+                createImprovedWordCloud(data);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('Gagal memuat data analisis: ' + error.message, 'danger');
+            });
+    }
     
     // Analysis form submission
     if (analysisForm) {
@@ -135,7 +125,16 @@ document.addEventListener('DOMContentLoaded', function() {
             const formData = new FormData();
             formData.append('title', document.getElementById('title').value);
             formData.append('description', document.getElementById('description')?.value || '');
-            formData.append('csv-file', document.getElementById('csv-file').files[0]);
+            
+            const csvFile = document.getElementById('csv-file').files[0];
+            if (!csvFile) {
+                showAlert('Silakan unggah file CSV terlebih dahulu.', 'warning');
+                loadingIndicator.classList.add('d-none');
+                submitBtn.disabled = false;
+                return;
+            }
+            
+            formData.append('csv-file', csvFile);
             
             // Send to server
             fetch('/upload', {
@@ -155,42 +154,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Store global analysis results
                 analysisResults = data;
-                allTweets = data.tweets;
+                allTweets = data.tweets || [];
                 
-                // Show results and evaluation sections
-                document.getElementById('results').classList.remove('d-none');
-                document.getElementById('results').classList.add('active');
-                document.getElementById('evaluation').classList.remove('d-none');
-                
-                // Enable previously disabled tabs
-                const resultsTab = document.querySelector('[data-tab="results"]');
-                const evaluationTab = document.querySelector('[data-tab="evaluation"]');
-                const downloadReportLink = document.getElementById('download-report-btn');
-                
-                if (resultsTab) resultsTab.classList.remove('disabled');
-                if (evaluationTab) evaluationTab.classList.remove('disabled');
-                if (downloadReportLink) downloadReportLink.classList.remove('disabled');
-                
-                // Update navigation
-                navLinks.forEach(l => l.classList.remove('active'));
-                if (resultsTab) resultsTab.classList.add('active');
-                
-                // Update UI with analysis results
-                updateAnalysisResults(data);
-                
-                // Initialize pagination
-                initializePagination();
-                
-                // Generate topics automatically using the analysis results
-                generateTopics(data);
-                
-                // Create word cloud (now in Analisis Kata tab)
-                createImprovedWordCloud(data);
-                
-                // Refresh page after a small delay to update navigation status
-                setTimeout(() => {
-                    window.location.reload();
-                }, 500);
+                // Redirect to hasil-analisis page
+                window.location.href = '/hasil-analisis';
             })
             .catch(error => {
                 loadingIndicator.classList.add('d-none');
@@ -256,6 +223,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Filter tweets and update display
     function filterAndDisplayTweets() {
+        if (!sentimentFilter) return;
+        
         const selectedSentiment = sentimentFilter.value;
         
         // First filter by sentiment
@@ -446,7 +415,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="d-flex justify-content-between align-items-center mt-2">
                     <div>
                         <span class="tweet-badge ${sentimentClass}">${tweet.predicted_sentiment}</span>
-                        <span class="confidence-badge">${tweet.confidence.toFixed(1)}%</span>
+                        <span class="confidence-badge">${parseFloat(tweet.confidence).toFixed(1)}%</span>
                     </div>
                     ${tweet.tweet_url ? `
                         <a href="${tweet.tweet_url}" class="btn btn-sm btn-outline-dark" target="_blank">
@@ -612,215 +581,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Create improved word cloud
     function createImprovedWordCloud(data) {
         const wordCloudContainer = document.getElementById('word-cloud-container');
-        if (!wordCloudContainer || !data || !data.tweets || data.tweets.length === 0) return;
+        if (!wordCloudContainer || !data) return;
         
         // If data already contains a word_cloud, use it
         if (data.word_cloud) {
             wordCloudContainer.innerHTML = `<img src="data:image/png;base64,${data.word_cloud}" alt="Word Cloud" class="img-fluid">`;
             return;
         }
-        
-        // Add loading indicator
-        wordCloudContainer.innerHTML = '<div class="chart-loader"><div class="spinner"></div></div>';
-        
-        // Create word frequency counts
-        const wordFrequencies = {};
-        
-        // Stopwords to filter out (expanded list)
-        const stopwords = [
-            'yang', 'dan', 'di', 'dengan', 'untuk', 'pada', 'adalah', 'ini', 'itu', 'atau', 'juga',
-            'dari', 'akan', 'ke', 'karena', 'oleh', 'saat', 'dalam', 'secara', 'telah', 'sebagai',
-            'bahwa', 'dapat', 'para', 'harus', 'namun', 'seperti', 'hingga', 'tak', 'tidak', 'tapi',
-            'kita', 'kami', 'saya', 'mereka', 'dia', 'http', 'https', 'co', 't', 'a', 'amp', 'rt',
-            'nya', 'yg', 'dgn', 'utk', 'dr', 'pd', 'jd', 'sdh', 'tdk', 'bisa', 'ada', 'kalo', 'bgt',
-            'aja', 'gitu', 'gak', 'mau', 'biar', 'kan', 'klo', 'deh', 'sih', 'nya', 'nih', 'loh'
-        ];
-        
-        // Process each tweet to extract words
-        data.tweets.forEach(tweet => {
-            if (!tweet.content) return;
-            
-            // Extract words from content
-            let content = tweet.content.toLowerCase();
-            
-            // Remove URLs
-            content = content.replace(/https?:\/\/[^\s]+/g, '');
-            
-            // Remove special characters and emoji
-            content = content.replace(/[^\w\s]/g, ' ');
-            
-            // Split into words
-            const words = content.split(/\s+/);
-            
-            // Filter words
-            const filteredWords = words.filter(word => 
-                word.length > 3 &&  // Filter words with length > 3
-                !stopwords.includes(word) &&  // Filter out stopwords
-                !/^\d+$/.test(word)  // Filter out numbers
-            );
-            
-            // Count word frequencies
-            filteredWords.forEach(word => {
-                wordFrequencies[word] = (wordFrequencies[word] || 0) + 1;
-            });
-        });
-        
-        // Convert to array for word cloud
-        const wordsArray = Object.entries(wordFrequencies)
-            .map(([text, value]) => ({ text, value }))
-            .filter(item => item.value > 1)  // Filter words that appear more than once
-            .sort((a, b) => b.value - a.value)
-            .slice(0, 100);  // Limit to top 100 words
-        
-        if (wordsArray.length === 0) {
-            wordCloudContainer.innerHTML = '<p class="text-center text-muted my-5">Tidak cukup data untuk menampilkan word cloud.</p>';
-            return;
-        }
-        
-        // Normalize word sizes between minSize and maxSize
-        const minCount = Math.min(...wordsArray.map(w => w.value));
-        const maxCount = Math.max(...wordsArray.map(w => w.value));
-        const minSize = 12;
-        const maxSize = 60;
-        
-        // Adjust word sizes
-        wordsArray.forEach(word => {
-            // Normalize size
-            const size = minSize + ((word.value - minCount) / (maxCount - minCount)) * (maxSize - minSize);
-            word.size = size;
-            
-            // Assign a color based on sentiment association
-            // Use a black/gray scale for the monochrome theme
-            const intensity = Math.round((word.value - minCount) / (maxCount - minCount) * 200);
-            word.color = `rgb(${intensity}, ${intensity}, ${intensity})`;
-        });
-        
-        // Check if d3 is available
-        if (typeof d3 === 'undefined') {
-            // Fallback to simple word display if d3 is not available
-            renderWordCloudFallback(wordsArray, wordCloudContainer);
-            return;
-        }
-        
-        // Create SVG element
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('width', '100%');
-        svg.setAttribute('height', '100%');
-        svg.style.opacity = 0;
-        wordCloudContainer.appendChild(svg);
-        
-        // Set up word cloud layout
-        const width = wordCloudContainer.clientWidth || 500;
-        const height = wordCloudContainer.clientHeight || 400;
-        
-        try {
-            // Use d3.layout.cloud for the word cloud
-            const layout = d3.layout.cloud()
-                .size([width, height])
-                .words(wordsArray)
-                .padding(5)
-                .rotate(() => Math.random() < 0.5 ? 0 : 90)
-                .font('Inter')
-                .fontSize(d => d.size)
-                .on('end', draw);
-            
-            layout.start();
-            
-            function draw(words) {
-                // Remove loading spinner
-                const loadingIndicator = wordCloudContainer.querySelector('.chart-loader');
-                if (loadingIndicator) {
-                    wordCloudContainer.removeChild(loadingIndicator);
-                }
-                
-                d3.select(svg)
-                    .attr('width', layout.size()[0])
-                    .attr('height', layout.size()[1])
-                    .append('g')
-                    .attr('transform', `translate(${layout.size()[0] / 2},${layout.size()[1] / 2})`)
-                    .selectAll('text')
-                    .data(words)
-                    .enter()
-                    .append('text')
-                    .style('font-size', d => `${d.size}px`)
-                    .style('font-family', 'Inter, sans-serif')
-                    .style('font-weight', d => Math.min(900, 300 + Math.floor(d.size * 10)))
-                    .style('fill', d => d.color)
-                    .attr('text-anchor', 'middle')
-                    .attr('transform', d => `translate(${d.x},${d.y}) rotate(${d.rotate})`)
-                    .text(d => d.text)
-                    .style('opacity', 0)
-                    .transition()
-                    .duration(1000)
-                    .style('opacity', 1)
-                    .on('end', function() {
-                        d3.select(this)
-                            .on('mouseover', function(d) {
-                                d3.select(this)
-                                    .transition()
-                                    .duration(200)
-                                    .style('font-size', `${d.size * 1.2}px`)
-                                    .style('fill', '#000');
-                            })
-                            .on('mouseout', function(d) {
-                                d3.select(this)
-                                    .transition()
-                                    .duration(200)
-                                    .style('font-size', `${d.size}px`)
-                                    .style('fill', d.color);
-                            });
-                    });
-                
-                // Fade in the SVG
-                svg.style.transition = 'opacity 1s ease';
-                svg.style.opacity = 1;
-            }
-        } catch (error) {
-            console.error("Error creating word cloud:", error);
-            // Fallback to simple word display
-            renderWordCloudFallback(wordsArray, wordCloudContainer);
-        }
-    }
-    
-    // Simple fallback for word cloud when d3 is not available
-    function renderWordCloudFallback(wordsArray, container) {
-        container.innerHTML = '';
-        
-        const wordCloudFallback = document.createElement('div');
-        wordCloudFallback.className = 'd-flex flex-wrap justify-content-center align-items-center h-100';
-        
-        wordsArray.slice(0, 50).forEach((word, index) => {
-            const wordSpan = document.createElement('span');
-            wordSpan.textContent = word.text;
-            wordSpan.style.fontSize = `${word.size / 10}rem`;
-            wordSpan.style.fontWeight = Math.min(900, 300 + Math.floor(word.size * 10));
-            wordSpan.style.color = word.color;
-            wordSpan.style.padding = '5px';
-            wordSpan.style.display = 'inline-block';
-            wordSpan.style.transition = 'all 0.3s ease';
-            wordSpan.style.opacity = 0;
-            wordSpan.style.transform = 'translateY(20px)';
-            
-            wordSpan.addEventListener('mouseover', function() {
-                this.style.transform = 'scale(1.2)';
-                this.style.color = '#000000';
-            });
-            
-            wordSpan.addEventListener('mouseout', function() {
-                this.style.transform = 'scale(1)';
-                this.style.color = word.color;
-            });
-            
-            wordCloudFallback.appendChild(wordSpan);
-            
-            // Animate entrance with delay based on index
-            setTimeout(() => {
-                wordSpan.style.opacity = 1;
-                wordSpan.style.transform = 'translateY(0)';
-            }, 50 * index);
-        });
-        
-        container.appendChild(wordCloudFallback);
     }
     
     // Function to update analysis results in UI
@@ -1036,14 +803,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Initialize data for charts
-        if (typeof Chart !== 'undefined') {
-            if (data.hashtag_sentiment) createSentimentByHashtagChart(data.hashtag_sentiment);
-            if (data.tweets) createSentimentByLocationChart(data.tweets);
-            if (data.tweets) createSentimentByLanguageChart(data.tweets);
-            if (data.sentiment_words) createTopWordsCharts(data.sentiment_words);
-        }
-        
         // Update sentiment plot
         const sentimentPlot = document.getElementById('sentiment-plot');
         if (sentimentPlot) {
@@ -1058,15 +817,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Initialize the welcome message in chatbot
         initializeChatbot(data);
-        
-        // Store global analysis results
-        analysisResults = data;
-        allTweets = data.tweets || [];
-        
-        // Initialize pagination if we have tweets
-        if (allTweets.length > 0) {
-            initializePagination();
-        }
     };
     
     // Initialize chatbot with welcome message
@@ -1102,662 +852,10 @@ document.addEventListener('DOMContentLoaded', function() {
         chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
     }
     
-    // Function to create sentiment by hashtag chart
-    function createSentimentByHashtagChart(hashtagSentimentData) {
-        const chartContainer = document.getElementById('sentiment-by-hashtag-chart');
-        if (!chartContainer || !hashtagSentimentData || hashtagSentimentData.length === 0) return;
-        
-        // Add loading indicator
-        chartContainer.innerHTML = '<div class="chart-loader"><div class="spinner"></div></div>';
-        
-        // Take top 5 hashtags by total count
-        const top5Hashtags = hashtagSentimentData
-            .sort((a, b) => b.total - a.total)
-            .slice(0, 5);
-        
-        const labels = top5Hashtags.map(item => item.tag);
-        const positiveData = top5Hashtags.map(item => item.positive);
-        const neutralData = top5Hashtags.map(item => item.neutral);
-        const negativeData = top5Hashtags.map(item => item.negative);
-        
-        // Create chart
-        const ctx = document.createElement('canvas');
-        chartContainer.innerHTML = '';
-        chartContainer.appendChild(ctx);
-        
-        // Destroy previous chart instance if exists
-        if (sentimentByHashtagChart) {
-            sentimentByHashtagChart.destroy();
-        }
-        
-        // Create new chart
-        sentimentByHashtagChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Positif',
-                        data: positiveData,
-                        backgroundColor: '#ffffff',
-                        borderColor: '#dddddd',
-                        borderWidth: 1
-                    },
-                    {
-                        label: 'Netral',
-                        data: neutralData,
-                        backgroundColor: '#9e9e9e',
-                        borderColor: '#757575',
-                        borderWidth: 1
-                    },
-                    {
-                        label: 'Negatif',
-                        data: negativeData,
-                        backgroundColor: '#000000',
-                        borderColor: '#000000',
-                        borderWidth: 1
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        stacked: true,
-                        title: {
-                            display: true,
-                            text: 'Hashtag',
-                            font: {
-                                weight: 'bold'
-                            }
-                        },
-                        grid: {
-                            display: false
-                        }
-                    },
-                    y: {
-                        stacked: true,
-                        title: {
-                            display: true,
-                            text: 'Persentase (%)',
-                            font: {
-                                weight: 'bold'
-                            }
-                        },
-                        min: 0,
-                        max: 100,
-                        ticks: {
-                            callback: function(value) {
-                                return value + '%';
-                            }
-                        }
-                    }
-                },
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Sentimen Berdasarkan Hashtag (Top 5)',
-                        font: {
-                            size: 16,
-                            weight: 'bold'
-                        },
-                        padding: {
-                            bottom: 15
-                        }
-                    },
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            usePointStyle: true,
-                            padding: 20
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ': ' + context.raw + '%';
-                            }
-                        }
-                    }
-                },
-                animation: {
-                    duration: 1000,
-                    easing: 'easeOutQuart'
-                }
-            }
-        });
-    }
-    
-    // Create sentiment by location chart
-    function createSentimentByLocationChart(tweetsData) {
-        const chartContainer = document.getElementById('sentiment-by-location-chart');
-        if (!chartContainer || !tweetsData || tweetsData.length === 0) return;
-        
-        // Add loading indicator
-        chartContainer.innerHTML = '<div class="chart-loader"><div class="spinner"></div></div>';
-        
-        // Group tweets by location and sentiment
-        const locationData = {};
-        
-        tweetsData.forEach(tweet => {
-            if (tweet.location) {
-                if (!locationData[tweet.location]) {
-                    locationData[tweet.location] = {
-                        Positif: 0,
-                        Netral: 0,
-                        Negatif: 0,
-                        total: 0
-                    };
-                }
-                
-                locationData[tweet.location][tweet.predicted_sentiment]++;
-                locationData[tweet.location].total++;
-            }
-        });
-        
-        // Convert to array and sort by total
-        const locationArray = Object.entries(locationData)
-            .map(([location, data]) => ({
-                location,
-                ...data,
-                positivePercent: (data.Positif / data.total * 100).toFixed(1),
-                neutralPercent: (data.Netral / data.total * 100).toFixed(1),
-                negativePercent: (data.Negatif / data.total * 100).toFixed(1)
-            }))
-            .filter(item => item.total >= 2) // Filter locations with at least 2 tweets
-            .sort((a, b) => b.total - a.total)
-            .slice(0, 5); // Take top 5
-        
-        if (locationArray.length === 0) {
-            chartContainer.innerHTML = '<p class="text-center text-muted my-5">Data lokasi tidak cukup untuk menampilkan grafik.</p>';
-            return;
-        }
-        
-        const labels = locationArray.map(item => item.location);
-        const positiveData = locationArray.map(item => parseFloat(item.positivePercent));
-        const neutralData = locationArray.map(item => parseFloat(item.neutralPercent));
-        const negativeData = locationArray.map(item => parseFloat(item.negativePercent));
-        
-        // Create chart
-        const ctx = document.createElement('canvas');
-        chartContainer.innerHTML = '';
-        chartContainer.appendChild(ctx);
-        
-        // Destroy previous chart instance if exists
-        if (sentimentByLocationChart) {
-            sentimentByLocationChart.destroy();
-        }
-        
-        // Create new chart
-        sentimentByLocationChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Positif',
-                        data: positiveData,
-                        backgroundColor: '#ffffff',
-                        borderColor: '#dddddd',
-                        borderWidth: 1
-                    },
-                    {
-                        label: 'Netral',
-                        data: neutralData,
-                        backgroundColor: '#9e9e9e',
-                        borderColor: '#757575',
-                        borderWidth: 1
-                    },
-                    {
-                        label: 'Negatif',
-                        data: negativeData,
-                        backgroundColor: '#000000',
-                        borderColor: '#000000',
-                        borderWidth: 1
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        stacked: true,
-                        title: {
-                            display: true,
-                            text: 'Lokasi',
-                            font: {
-                                weight: 'bold'
-                            }
-                        },
-                        ticks: {
-                            maxRotation: 45,
-                            minRotation: 45
-                        },
-                        grid: {
-                            display: false
-                        }
-                    },
-                    y: {
-                        stacked: true,
-                        title: {
-                            display: true,
-                            text: 'Persentase (%)',
-                            font: {
-                                weight: 'bold'
-                            }
-                        },
-                        min: 0,
-                        max: 100,
-                        ticks: {
-                            callback: function(value) {
-                                return value + '%';
-                            }
-                        }
-                    }
-                },
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Sentimen Berdasarkan Lokasi (Top 5)',
-                        font: {
-                            size: 16,
-                            weight: 'bold'
-                        },
-                        padding: {
-                            bottom: 15
-                        }
-                    },
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            usePointStyle: true,
-                            padding: 20
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ': ' + context.raw + '%';
-                            },
-                            afterLabel: function(context) {
-                                const index = context.dataIndex;
-                                const locationItem = locationArray[index];
-                                return 'Total tweets: ' + locationItem.total;
-                            }
-                        }
-                    }
-                },
-                animation: {
-                    duration: 1200,
-                    easing: 'easeOutQuart'
-                }
-            }
-        });
-    }
-    
-    // Create sentiment by language chart
-    function createSentimentByLanguageChart(tweetsData) {
-        const chartContainer = document.getElementById('sentiment-by-language-chart');
-        if (!chartContainer || !tweetsData || tweetsData.length === 0) return;
-        
-        // Add loading indicator
-        chartContainer.innerHTML = '<div class="chart-loader"><div class="spinner"></div></div>';
-        
-        // Group tweets by language and sentiment
-        const languageData = {};
-        const languageNames = {
-            'in': 'Indonesia',
-            'en': 'English',
-            'id': 'Indonesia',
-            'qme': 'Quechua',
-            'und': 'Undefined',
-            'ar': 'Arabic',
-            'fr': 'French',
-            'es': 'Spanish',
-            'de': 'German'
-        };
-        
-        tweetsData.forEach(tweet => {
-            if (tweet.lang) {
-                if (!languageData[tweet.lang]) {
-                    languageData[tweet.lang] = {
-                        Positif: 0,
-                        Netral: 0,
-                        Negatif: 0,
-                        total: 0
-                    };
-                }
-                
-                languageData[tweet.lang][tweet.predicted_sentiment]++;
-                languageData[tweet.lang].total++;
-            }
-        });
-        
-        // Convert to array and sort by total
-        const languageArray = Object.entries(languageData)
-            .map(([lang, data]) => ({
-                lang,
-                langName: languageNames[lang] || lang,
-                ...data,
-                positivePercent: (data.Positif / data.total * 100).toFixed(1),
-                neutralPercent: (data.Netral / data.total * 100).toFixed(1),
-                negativePercent: (data.Negatif / data.total * 100).toFixed(1)
-            }))
-            .sort((a, b) => b.total - a.total)
-            .slice(0, 5); // Take top 5
-        
-        const labels = languageArray.map(item => item.langName);
-        const positiveData = languageArray.map(item => parseFloat(item.positivePercent));
-        const neutralData = languageArray.map(item => parseFloat(item.neutralPercent));
-        const negativeData = languageArray.map(item => parseFloat(item.negativePercent));
-        
-        // Create chart
-        const ctx = document.createElement('canvas');
-        chartContainer.innerHTML = '';
-        chartContainer.appendChild(ctx);
-        
-        // Destroy previous chart instance if exists
-        if (sentimentByLanguageChart) {
-            sentimentByLanguageChart.destroy();
-        }
-        
-        // Create new chart
-        sentimentByLanguageChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Positif',
-                        data: positiveData,
-                        backgroundColor: '#ffffff',
-                        borderColor: '#dddddd',
-                        borderWidth: 1
-                    },
-                    {
-                        label: 'Netral',
-                        data: neutralData,
-                        backgroundColor: '#9e9e9e',
-                        borderColor: '#757575',
-                        borderWidth: 1
-                    },
-                    {
-                        label: 'Negatif',
-                        data: negativeData,
-                        backgroundColor: '#000000',
-                        borderColor: '#000000',
-                        borderWidth: 1
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        stacked: true,
-                        title: {
-                            display: true,
-                            text: 'Bahasa',
-                            font: {
-                                weight: 'bold'
-                            }
-                        },
-                        grid: {
-                            display: false
-                        }
-                    },
-                    y: {
-                        stacked: true,
-                        title: {
-                            display: true,
-                            text: 'Persentase (%)',
-                            font: {
-                                weight: 'bold'
-                            }
-                        },
-                        min: 0,
-                        max: 100,
-                        ticks: {
-                            callback: function(value) {
-                                return value + '%';
-                            }
-                        }
-                    }
-                },
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Sentimen Berdasarkan Bahasa (Top 5)',
-                        font: {
-                            size: 16,
-                            weight: 'bold'
-                        },
-                        padding: {
-                            bottom: 15
-                        }
-                    },
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            usePointStyle: true,
-                            padding: 20
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ': ' + context.raw + '%';
-                            },
-                            afterLabel: function(context) {
-                                const index = context.dataIndex;
-                                const languageItem = languageArray[index];
-                                return 'Total tweets: ' + languageItem.total;
-                            }
-                        }
-                    }
-                },
-                animation: {
-                    duration: 1400,
-                    easing: 'easeOutQuart'
-                }
-            }
-        });
-    }
-    
-    // Create top words charts for each sentiment
-    function createTopWordsCharts(sentimentWords) {
-        if (!sentimentWords) return;
-        
-        createWordFrequencyChart('positive-words-chart', sentimentWords.positive, 'Kata Umum dalam Sentimen Positif', '#ffffff');
-        createWordFrequencyChart('neutral-words-chart', sentimentWords.neutral, 'Kata Umum dalam Sentimen Netral', '#9e9e9e');
-        createWordFrequencyChart('negative-words-chart', sentimentWords.negative, 'Kata Umum dalam Sentimen Negatif', '#000000');
-    }
-    
-    // Create word frequency chart with enhanced animations
-    function createWordFrequencyChart(containerId, wordFrequencies, title, color) {
-        const chartContainer = document.getElementById(containerId);
-        if (!chartContainer || !wordFrequencies || wordFrequencies.length === 0) {
-            if (chartContainer) {
-                chartContainer.innerHTML = '<p class="text-center text-muted my-5">Tidak cukup data untuk menampilkan grafik ini.</p>';
-            }
-            return;
-        }
-        
-        // Add loading indicator
-        chartContainer.innerHTML = '<div class="chart-loader"><div class="spinner"></div></div>';
-        
-        // Prepare data for chart
-        const wordsArray = wordFrequencies
-            .map(item => {
-                if (typeof item === 'object' && item.word && item.count !== undefined) {
-                    return { word: item.word, count: item.count };
-                } else if (typeof item === 'string') {
-                    return { word: item, count: 1 }; // Default count if only string is provided
-                } else {
-                    return null;
-                }
-            })
-            .filter(item => item !== null) // Filter out any nulls
-            .sort((a, b) => b.count - a.count)
-            .slice(0, 10);
-        
-        const labels = wordsArray.map(item => item.word);
-        const data = wordsArray.map(item => item.count);
-        
-        // Create chart
-        const ctx = document.createElement('canvas');
-        chartContainer.innerHTML = '';
-        chartContainer.appendChild(ctx);
-        
-        // Determine text color based on background color
-        let textColor = '#000000';
-        if (color === '#000000') {
-            textColor = '#ffffff';
-        }
-        
-        // Get chart instance based on container ID
-        let chartInstance;
-        if (containerId === 'positive-words-chart') {
-            // Destroy previous chart instance if exists
-            if (positiveWordsChart) {
-                positiveWordsChart.destroy();
-            }
-            
-            // Create new chart
-            chartInstance = positiveWordsChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Frekuensi',
-                            data: data,
-                            backgroundColor: color,
-                            borderColor: '#333333',
-                            borderWidth: 1
-                        }
-                    ]
-                },
-                options: getWordChartOptions(title, textColor)
-            });
-        } else if (containerId === 'neutral-words-chart') {
-            // Destroy previous chart instance if exists
-            if (neutralWordsChart) {
-                neutralWordsChart.destroy();
-            }
-            
-            // Create new chart
-            chartInstance = neutralWordsChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Frekuensi',
-                            data: data,
-                            backgroundColor: color,
-                            borderColor: '#333333',
-                            borderWidth: 1
-                        }
-                    ]
-                },
-                options: getWordChartOptions(title, textColor)
-            });
-        } else if (containerId === 'negative-words-chart') {
-            // Destroy previous chart instance if exists
-            if (negativeWordsChart) {
-                negativeWordsChart.destroy();
-            }
-            
-            // Create new chart
-            chartInstance = negativeWordsChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Frekuensi',
-                            data: data,
-                            backgroundColor: color,
-                            borderColor: '#333333',
-                            borderWidth: 1
-                        }
-                    ]
-                },
-                options: getWordChartOptions(title, textColor)
-            });
-        }
-        
-        return chartInstance;
-    }
-    
-    // Helper function for word frequency chart options
-    function getWordChartOptions(title, textColor) {
-        return {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Frekuensi',
-                        font: {
-                            weight: 'bold'
-                        }
-                    },
-                    beginAtZero: true,
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.05)'
-                    }
-                },
-                y: {
-                    title: {
-                        display: false
-                    },
-                    grid: {
-                        display: false
-                    }
-                }
-            },
-            plugins: {
-                title: {
-                    display: true,
-                    text: title,
-                    font: {
-                        size: 16,
-                        weight: 'bold'
-                    },
-                    padding: {
-                        bottom: 15
-                    }
-                },
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return 'Frekuensi: ' + context.raw;
-                        }
-                    }
-                }
-            },
-            animation: {
-                delay: function(context) {
-                    return context.dataIndex * 100;
-                },
-                duration: 1000,
-                easing: 'easeOutQuart'
-            }
-        };
-    }
-    
     // Function to send message to chatbot
     function sendChatbotMessage() {
+        if (!chatbotInput || !chatbotMessages) return;
+        
         const messageText = chatbotInput.value.trim();
         
         if (!messageText) return;

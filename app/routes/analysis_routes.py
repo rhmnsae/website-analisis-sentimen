@@ -29,6 +29,125 @@ def clean_for_json(value):
         return ""
     return value
 
+@analysis_bp.route('/api/analysis-data', methods=['GET'])
+@login_required
+def get_analysis_data():
+    """Endpoint to get the current analysis data for the client"""
+    # Check if analysis_file exists in the session
+    if 'analysis_file' not in session:
+        return jsonify({'error': 'No analysis data available'}), 404
+    
+    file_path = session.get('analysis_file')
+    if not os.path.exists(file_path):
+        return jsonify({'error': 'Analysis file not found'}), 404
+    
+    # Get analysis data by ID from session
+    analysis_context = session.get('analysis_context', {})
+    
+    try:
+        # Baca file hasil analisis
+        result_df = pd.read_csv(file_path)
+        
+        # Hitung statistik
+        sentiment_counts = result_df['predicted_sentiment'].value_counts()
+        total_tweets = len(result_df)
+        
+        # Ekstrak hashtags
+        hashtag_counts = extract_hashtags(result_df)
+        
+        # Ekstrak topik
+        topics = extract_topics(result_df)
+        
+        # Analisis sentimen per hashtag
+        hashtag_sentiment = analyze_sentiment_per_hashtag(result_df)
+        
+        # Dapatkan pengguna teratas
+        top_users = get_top_users(result_df)
+        
+        # Try to extract words by sentiment with improved function
+        try:
+            sentiment_words = extract_words_by_sentiment(result_df)
+        except Exception as e:
+            print(f"Error in sentiment word extraction: {e}")
+            sentiment_words = {
+                'positive': [],
+                'neutral': [],
+                'negative': []
+            }
+        
+        # Create plots with updated color scheme
+        sentiment_plot = create_sentiment_plot(result_df)
+        
+        # Create improved word cloud with new function
+        try:
+            word_cloud = create_improved_word_cloud(result_df)
+        except Exception as e:
+            print(f"Error creating word cloud: {e}")
+            word_cloud = None
+        
+        # Siapkan data untuk tampilan
+        positive_count = int(sentiment_counts.get('Positif', 0))
+        neutral_count = int(sentiment_counts.get('Netral', 0))
+        negative_count = int(sentiment_counts.get('Negatif', 0))
+        
+        title = analysis_context.get('title', 'Analisis Sentimen X')
+        description = analysis_context.get('description', '')
+        
+        # Create analysis results with error checking for all components
+        analysis_results = {
+            'title': title,
+            'description': description,
+            'total_tweets': total_tweets,
+            'positive_count': positive_count,
+            'neutral_count': neutral_count,
+            'negative_count': negative_count,
+            'positive_percent': round((positive_count / total_tweets * 100), 1) if total_tweets > 0 else 0,
+            'neutral_percent': round((neutral_count / total_tweets * 100), 1) if total_tweets > 0 else 0,
+            'negative_percent': round((negative_count / total_tweets * 100), 1) if total_tweets > 0 else 0,
+            'top_hashtags': [{'tag': tag, 'count': count} for tag, count in hashtag_counts.most_common(10)],
+            'topics': topics,
+            'hashtag_sentiment': hashtag_sentiment,
+            'top_users': top_users,
+            'sentiment_words': {
+                'positive': sentiment_words.get('positive', []),
+                'neutral': sentiment_words.get('neutral', []),
+                'negative': sentiment_words.get('negative', [])
+            },
+            'sentiment_plot': sentiment_plot,
+            'word_cloud': word_cloud if word_cloud else None
+        }
+        
+        # Add necessary fields to tweets that we'll send directly to the client
+        tweets_for_display = []
+        for _, row in result_df.iterrows():
+            tweet = {
+                'username': clean_for_json(row.get('username', '')),
+                'content': clean_for_json(row.get('content', '')),
+                'date': clean_for_json(row.get('date', '')),
+                'likes': clean_for_json(row.get('likes', 0)),
+                'retweets': clean_for_json(row.get('retweets', 0)),
+                'replies': clean_for_json(row.get('replies', 0)),
+                'predicted_sentiment': clean_for_json(row.get('predicted_sentiment', '')),
+                'confidence': clean_for_json(row.get('confidence', 0))
+            }
+            
+            # Add optional fields if they exist
+            for field in ['tweet_url', 'image_url', 'lang', 'location']:
+                if field in row and not pd.isna(row[field]):
+                    tweet[field] = clean_for_json(row[field])
+            
+            tweets_for_display.append(tweet)
+        
+        # Add tweets to the results
+        analysis_results['tweets'] = tweets_for_display
+        
+        return jsonify(analysis_results)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+# Existing code continues...
 @analysis_bp.route('/upload', methods=['POST'])
 @login_required
 def upload_file():
@@ -250,13 +369,13 @@ def download_report():
     # Cek apakah ada data analisis di session
     if 'analysis_file' not in session or 'analysis_context' not in session:
         flash("Tidak ada data analisis yang tersedia. Silakan upload file CSV terlebih dahulu.", "warning")
-        return redirect(url_for('main.index'))
+        return redirect(url_for('main.input_data'))
     
     # Ambil data analisis dari file
     file_path = session.get('analysis_file')
     if not os.path.exists(file_path):
         flash("File analisis tidak ditemukan.", "error")
-        return redirect(url_for('main.index'))
+        return redirect(url_for('main.input_data'))
     
     # Baca data analisis
     analysis_df = pd.read_csv(file_path)

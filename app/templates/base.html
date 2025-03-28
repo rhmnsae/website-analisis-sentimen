@@ -25,49 +25,18 @@
                 </div>
                 <nav>
                     {% if current_user.is_authenticated %}
-                        <a href="{{ url_for('main.index') }}" class="nav-tabs-link active" data-tab="input">
+                        <a href="{{ url_for('main.input_data') }}" class="nav-tabs-link {% if request.endpoint == 'main.input_data' %}active{% endif %}">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
                             Input Data
                         </a>
-                        <a href="{{ url_for('history.index') }}" class="nav-tabs-link" data-tab="history">
+                        <a href="{{ url_for('main.hasil_analisis') }}" class="nav-tabs-link {% if request.endpoint == 'main.hasil_analisis' %}active{% endif %} {% if 'analysis_file' not in session %}disabled{% endif %}" {% if 'analysis_file' not in session %}title="Lakukan analisis terlebih dahulu"{% endif %}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                            Hasil Analisis
+                        </a>
+                        <a href="{{ url_for('history.index') }}" class="nav-tabs-link {% if request.endpoint.startswith('history.') %}active{% endif %}">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                             Riwayat
                         </a>
-                        {% if session.get('analysis_file') %}
-                            <a href="#main-content" class="nav-tabs-link" data-tab="results">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-                                Hasil Analisis
-                            </a>
-                            <a href="#main-content" class="nav-tabs-link" data-tab="evaluation">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                                Evaluasi Kebijakan
-                            </a>
-                            <a href="{{ url_for('analysis.download_report') }}" class="nav-tabs-link">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                    <polyline points="7 10 12 15 17 10"></polyline>
-                                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                                </svg>
-                                Unduh Report
-                            </a>
-                        {% else %}
-                            <a href="#main-content" class="nav-tabs-link disabled" data-tab="results" title="Lakukan analisis terlebih dahulu">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-                                Hasil Analisis
-                            </a>
-                            <a href="#main-content" class="nav-tabs-link disabled" data-tab="evaluation" title="Lakukan analisis terlebih dahulu">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                                Evaluasi Kebijakan
-                            </a>
-                            <a href="#" class="disabled" title="Lakukan analisis terlebih dahulu">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                    <polyline points="7 10 12 15 17 10"></polyline>
-                                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                                </svg>
-                                Unduh Report
-                            </a>
-                        {% endif %}
                         
                         <div class="dropdown ms-3">
                             <a href="#" class="nav-link dropdown-toggle" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">

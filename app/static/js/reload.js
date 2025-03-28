@@ -16,15 +16,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.getAttribute('href') !== '#' && 
                 !this.getAttribute('href').startsWith('#')) {
                     
-                // Jika kita beralih ke tab seperti 'history', 'profile', dll
-                if (!this.classList.contains('disabled') && this.getAttribute('href') !== window.location.pathname) {
-                    // Tambahkan loading overlay sebelum reload
+                // Jika kita beralih ke tab seperti 'input-data', 'hasil-analisis', 'history', 'profile'
+                if (!this.classList.contains('disabled')) {
+                    // Tambahkan loading overlay sebelum pindah halaman
                     addLoadingOverlay();
-                    
-                    // Tambahkan timeout kecil untuk efek visual
-                    setTimeout(() => {
-                        window.location.href = this.getAttribute('href');
-                    }, 300);
                 }
             }
         });
@@ -41,11 +36,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                 // Tambahkan loading overlay sebelum reload
                 addLoadingOverlay();
-                
-                // Tambahkan timeout kecil untuk efek visual
-                setTimeout(() => {
-                    window.location.href = this.getAttribute('href');
-                }, 300);
             }
         });
     });
