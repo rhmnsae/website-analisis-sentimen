@@ -14,6 +14,14 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
                 Kembali ke Riwayat
             </a>
+            <a href="{{ url_for('analysis.download_report') }}" id="download-report-btn" class="download-report-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Unduh Report
+            </a>
         </div>
     </div>
     <div class="card-body">
@@ -22,11 +30,18 @@
                 <small class="text-muted">Dibuat pada: {{ analysis.created_at.strftime('%d %B %Y, %H:%M') }}</small>
             </div>
             <div class="col-md-6 text-end">
-                <a href="{{ url_for('analysis.download_report') }}" class="btn btn-sm btn-dark">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                    Unduh Report
-                </a>
+                <span class="badge bg-success me-1">Positif: {{ analysis.positive_percent }}%</span>
+                <span class="badge bg-warning me-1">Netral: {{ analysis.neutral_percent }}%</span>
+                <span class="badge bg-danger">Negatif: {{ analysis.negative_percent }}%</span>
             </div>
+        </div>
+        
+        <div class="mb-3">
+            {% if analysis.description %}
+                <div class="alert alert-light">
+                    <strong>Deskripsi:</strong> {{ analysis.description }}
+                </div>
+            {% endif %}
         </div>
         
         <ul class="nav nav-tabs mb-3" id="result-tabs" role="tablist">
@@ -289,10 +304,82 @@
     const dataScript = document.getElementById('analysis-data');
     const analysisResults = dataScript ? JSON.parse(dataScript.textContent) : null;
     
+    // Debug: Cek apakah data berhasil dimuat
+    console.log("Analysis data loaded:", analysisResults);
+
+    function loadAnalysisData() {
+        // Ambil ID analisis dari URL
+        const urlParts = window.location.pathname.split('/');
+        const analysisId = urlParts[urlParts.length - 1];
+        
+        // Fetch data analisis dari API dengan parameter ID
+        fetch(`/api/analysis-data?id=${analysisId}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Gagal memuat data analisis');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("Successfully loaded analysis data:", data);
+                
+                // Update UI dengan data yang dimuat
+                updateAnalysisResults(data);
+                
+                // Initialize pagination
+                initializePagination();
+                
+                // Generate topics untuk chatbot
+                generateTopics(data);
+                
+                // Buat word cloud
+                createImprovedWordCloud(data);
+            })
+            .catch(error => {
+                console.error('Error fetching analysis data:', error);
+                alert('Gagal memuat data analisis. Silakan refresh halaman.');
+            });
+    }
+
+    // Panggil fungsi ini sebagai alternatif jika data tidak tersedia via script tag
+    document.addEventListener('DOMContentLoaded', function() {
+        if (!analysisResults) {
+            console.log("No data found in script tag, trying to load via API...");
+            loadAnalysisData();
+        }
+    });
+    
     // When the document is ready, update the UI with the data
     document.addEventListener('DOMContentLoaded', function() {
+        // Langsung update elemen-elemen static juga secara manual
         if (analysisResults) {
-            // This will trigger the scripts to update the UI with the analysis data
+            // Update jumlah dan persentase statis
+            document.getElementById('total-tweets').textContent = "{{ analysis.total_tweets }}";
+            document.getElementById('positive-count').textContent = "{{ analysis.positive_count }}";
+            document.getElementById('neutral-count').textContent = "{{ analysis.neutral_count }}";
+            document.getElementById('negative-count').textContent = "{{ analysis.negative_count }}";
+            
+            document.getElementById('positive-percent').textContent = "{{ analysis.positive_percent }}%";
+            document.getElementById('neutral-percent').textContent = "{{ analysis.neutral_percent }}%";
+            document.getElementById('negative-percent').textContent = "{{ analysis.negative_percent }}%";
+            
+            // Update progress bar jika ada
+            const positiveSegment = document.getElementById('positive-segment');
+            const neutralSegment = document.getElementById('neutral-segment');
+            const negativeSegment = document.getElementById('negative-segment');
+            
+            if (positiveSegment && neutralSegment && negativeSegment) {
+                positiveSegment.style.width = "{{ analysis.positive_percent }}%";
+                positiveSegment.textContent = "{{ analysis.positive_percent }}%";
+                
+                neutralSegment.style.width = "{{ analysis.neutral_percent }}%";
+                neutralSegment.textContent = "{{ analysis.neutral_percent }}%";
+                
+                negativeSegment.style.width = "{{ analysis.negative_percent }}%";
+                negativeSegment.textContent = "{{ analysis.negative_percent }}%";
+            }
+            
+            // Panggil fungsi untuk update UI
             updateAnalysisResults(analysisResults);
             
             // Initialize pagination
@@ -303,7 +390,10 @@
             
             // Create word cloud
             createImprovedWordCloud(analysisResults);
+        } else {
+            console.error("Data analisis tidak tersedia. Cek endpoint API atau variabel session.");
         }
-    });
+    }
+    );
 </script>
 {% endblock %}

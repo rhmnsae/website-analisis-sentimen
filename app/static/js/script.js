@@ -117,6 +117,9 @@ document.addEventListener('DOMContentLoaded', function() {
         analysisForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
+            // Tambahkan flag untuk mencegah submit berulang
+            if (submitBtn.disabled) return;
+            
             // Show loading indicator and disable submit button
             loadingIndicator.classList.remove('d-none');
             submitBtn.disabled = true;
@@ -156,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 analysisResults = data;
                 allTweets = data.tweets || [];
                 
-                // Redirect to hasil-analisis page
+                // Arahkan ke halaman hasil analisis
                 window.location.href = '/hasil-analisis';
             })
             .catch(error => {
@@ -164,16 +167,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 submitBtn.disabled = false;
                 showAlert('Error: ' + error.message, 'danger');
             });
-        });
-    }
-    
-    // Chatbot send message
-    if (chatbotSend && chatbotInput) {
-        chatbotSend.addEventListener('click', sendChatbotMessage);
-        chatbotInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                sendChatbotMessage();
-            }
         });
     }
     

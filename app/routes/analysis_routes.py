@@ -33,6 +33,46 @@ def clean_for_json(value):
 @login_required
 def get_analysis_data():
     """Endpoint to get the current analysis data for the client"""
+    analysis_id = request.args.get('id')
+    
+    # Jika ada parameter id, gunakan untuk mengambil data spesifik
+    if analysis_id:
+        try:
+            analysis = Analysis.query.get_or_404(int(analysis_id))
+            # Pastikan user punya akses
+            if analysis.user_id != current_user.id:
+                return jsonify({'error': 'Tidak memiliki akses ke analisis ini'}), 403
+                
+            analysis_data = AnalysisData.query.filter_by(analysis_id=analysis.id).first()
+            if not analysis_data:
+                return jsonify({'error': 'Data analisis tidak ditemukan'}), 404
+                
+            # Simpan di session untuk penggunaan lainnya
+            session['analysis_file'] = analysis_data.file_path
+            session['analysis_context'] = {
+                'title': analysis.title,
+                'description': analysis.description or '',
+                'total_tweets': analysis.total_tweets,
+                'positive_count': analysis.positive_count,
+                'neutral_count': analysis.neutral_count,
+                'negative_count': analysis.negative_count,
+                'positive_percent': analysis.positive_percent,
+                'neutral_percent': analysis.neutral_percent,
+                'negative_percent': analysis.negative_percent
+            }
+            
+            # Kembalikan data lengkap
+            return jsonify(analysis_data.get_data())
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    # Jika tidak ada parameter id, gunakan data dari session seperti sebelumnya
+    if 'analysis_file' not in session:
+        return jsonify({'error': 'No analysis data available'}), 404
+    
+    file_path = session.get('analysis_file')
+    if not os.path.exists(file_path):
+        return jsonify({'error': 'Analysis file not found'}), 404
     # Check if analysis_file exists in the session
     if 'analysis_file' not in session:
         return jsonify({'error': 'No analysis data available'}), 404

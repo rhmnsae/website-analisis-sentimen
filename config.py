@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 class Config:
     SECRET_KEY = 'analisis_sentimen_X'
@@ -6,7 +7,8 @@ class Config:
     MODEL_FOLDER = os.path.join(os.getcwd(), 'models')
     SESSION_TYPE = 'filesystem'
     SESSION_FILE_DIR = os.path.join(os.getcwd(), 'flask_sessions')
-    SESSION_PERMANENT = False
+    SESSION_PERMANENT = True  # Ubah menjadi True
+    PERMANENT_SESSION_LIFETIME = timedelta(days=30)  # Tambahkan batas waktu session 30 hari
     SESSION_USE_SIGNER = True
     MODEL_PATH = os.path.join(MODEL_FOLDER, 'indobert_sentiment_best.pt')
     GEMINI_API_KEY = "AIzaSyCYPhQCDxpyz_MmR86v43XgKvMryx5FfQY"
