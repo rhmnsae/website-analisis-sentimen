@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Analisis Sentimen X{% endblock %}
+
+{% block content %}
+<div class="content">
+    <!-- Input Section -->
+    <section id="input" class="main-tab-content active">
+        <div class="card mb-4">
+            <div class="card-header">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                <h2 class="card-title">Unggah Data dan Tentukan Topik</h2>
+            </div>
+            <div class="card-body">
+                <form id="analysis-form">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="title" class="form-label fw-bold">
+                                Judul Analisis
+                            </label>
+                            <input type="text" class="form-control" id="title" placeholder="Contoh: Analisis Sentimen Kampanye #AstaCita" required>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="csv-file" class="form-label fw-bold">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                Unggah File CSV X
+                            </label>
+                            <input type="file" class="form-control" id="csv-file" accept=".csv" required>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-dark" id="submit-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                        Mulai Analisis
+                    </button>
+                </form>
+                <div id="loading" class="text-center mt-3 d-none">
+                    <div class="spinner-border text-dark" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Menganalisis data, mohon tunggu...</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Results Section (hidden until analysis is done) -->
+    <section id="results" class="main-tab-content d-none">
+        {% include 'results.html' %}
+    </section>
+    
+    <!-- Evaluation Section with Chatbot -->
+    <section id="evaluation" class="main-tab-content d-none">
+        <div class="card">
+            <div class="card-header">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                <h2 class="card-title">Evaluasi Kebijakan</h2>
+            </div>
+            <div class="card-body">
+                <p>Gunakan chatbot evaluasi kebijakan untuk mendapatkan analisis mendalam tentang implikasi kebijakan berdasarkan sentimen publik yang terdeteksi. Chatbot ini menggunakan AI Gemini untuk menganalisis data dan memberikan rekomendasi kebijakan yang terperinci.</p>
+                
+                <div class="chatbot-container mt-4">
+                    <div class="chatbot-header">
+                        <div class="chatbot-avatar">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100" fill="none">
+                                <!-- Lingkaran Kepala -->
+                                <circle cx="50" cy="50" r="40" fill="black" stroke="white" stroke-width="3"/>
+                                
+                                <!-- Mata Kiri -->
+                                <circle cx="35" cy="40" r="5" fill="white"/>
+                                
+                                <!-- Mata Kanan -->
+                                <circle cx="65" cy="40" r="5" fill="white"/>
+                                
+                                <!-- Mulut -->
+                                <path d="M35 60 Q50 75, 65 60" stroke="white" stroke-width="3" fill="none"/>
+                                
+                                <!-- Antena -->
+                                <line x1="50" y1="10" x2="50" y2="20" stroke="white" stroke-width="3"/>
+                                <circle cx="50" cy="10" r="4" fill="white"/>
+                              </svg>
+                        </div>
+                        <div>
+                            <h5 class="chatbot-title mb-0">Chat Policy Assistant</h5>
+                            <div class="chatbot-status">Online</div>
+                        </div>
+                    </div>
+                    
+                    <div id="chatbot-messages" class="chatbot-messages">
+                        <!-- Initial message will be added dynamically -->
+                    </div>
+                    
+                    <div class="chatbot-topic-buttons" id="chatbot-topic-buttons">
+                        <!-- Topic buttons will be added dynamically -->
+                    </div>
+                    
+                    <div class="chatbot-input-area">
+                        <input type="text" id="chatbot-input" class="chatbot-input" placeholder="Ketik Pesan">
+                        <button id="chatbot-send" class="chatbot-send">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
