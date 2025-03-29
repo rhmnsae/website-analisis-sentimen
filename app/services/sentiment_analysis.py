@@ -8,6 +8,167 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from nltk.corpus import stopwords
 from app.services.preprocessing import preprocess_text, tokenize_text
 from flask import current_app
+import hashlib
+import time
+from functools import lru_cache
+
+_analysis_cache = {}
+# Waktu cache dalam detik (5 menit)
+_CACHE_DURATION = 300
+
+def get_file_hash(file_path):
+    """
+    Menghitung hash MD5 dari file untuk identifikasi unik
+    """
+    hash_md5 = hashlib.md5()
+    with open(file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
+
+# Modifikasi fungsi predict_sentiments
+def predict_sentiments(file_path):
+    """
+    Memprediksi sentimen dari teks dalam file CSV menggunakan model IndoBERT terlatih
+    dengan mekanisme cache untuk mencegah duplikasi proses
+    """
+    # Cek apakah file ada
+    if not os.path.exists(file_path):
+        raise ValueError(f"File tidak ditemukan: {file_path}")
+    
+    # Hitung hash file
+    file_hash = get_file_hash(file_path)
+    
+    # Cek cache
+    current_time = time.time()
+    if file_hash in _analysis_cache:
+        cache_time, result_df = _analysis_cache[file_hash]
+        # Cek apakah cache masih valid
+        if current_time - cache_time < _CACHE_DURATION:
+            print(f"Menggunakan hasil analisis dari cache untuk file: {file_path}")
+            return result_df
+    
+    # Jika tidak ada di cache atau cache sudah kedaluwarsa, lakukan analisis
+    print(f"Memulai analisis baru untuk file: {file_path}")
+    
+    # Muat data
+    df = pd.read_csv(file_path)
+    
+    # Pastikan kolom full_text atau text ada
+    if 'full_text' not in df.columns and 'text' not in df.columns:
+        raise ValueError("File CSV harus memiliki kolom 'full_text' atau 'text'")
+    
+    # Gunakan kolom text jika full_text tidak ada
+    text_column = 'full_text' if 'full_text' in df.columns else 'text'
+    
+    # Preprocessing teks
+    print("Preprocessing teks...")
+    df['processed_text'] = df[text_column].apply(preprocess_text)
+    
+    # Muat tokenizer dan model terlatih
+    tokenizer, model = load_sentiment_model()
+    
+    # Siapkan device
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model.to(device)
+    model.eval()
+    
+    # Siapkan hasil
+    results = []
+    confidences = []
+    sentiment_labels = ['Negatif', 'Netral', 'Positif']
+    
+    print(f"Melakukan prediksi sentimen untuk {len(df)} tweets...")
+    
+    # Prediksi dalam batch
+    batch_size = 16
+    for i in range(0, len(df), batch_size):
+        batch_texts = df['processed_text'].iloc[i:i+batch_size].tolist()
+        
+        # Tokenisasi
+        encodings = tokenizer(
+            batch_texts,
+            add_special_tokens=True,
+            max_length=128,
+            padding='max_length',
+            truncation=True,
+            return_attention_mask=True,
+            return_tensors='pt'
+        )
+        
+        input_ids = encodings['input_ids'].to(device)
+        attention_mask = encodings['attention_mask'].to(device)
+        
+        # Prediksi
+        with torch.no_grad():
+            outputs = model(
+                input_ids=input_ids,
+                attention_mask=attention_mask
+            )
+            
+            probs = torch.nn.functional.softmax(outputs.logits, dim=1)
+            preds = torch.argmax(probs, dim=1)
+            
+            batch_results = [sentiment_labels[pred] for pred in preds.cpu().tolist()]
+            batch_confidences = [float(probs[i, preds[i]]) * 100 for i in range(len(preds))]
+            
+            results.extend(batch_results)
+            confidences.extend(batch_confidences)
+    
+    # Tambahkan hasil prediksi ke dataframe
+    df['predicted_sentiment'] = results
+    df['confidence'] = confidences
+    
+    # Tambahkan tanggal jika ada created_at
+    if 'created_at' in df.columns:
+        df['date'] = pd.to_datetime(df['created_at'], 
+                             format='%a %b %d %H:%M:%S %z %Y',  # Format Twitter
+                             errors='coerce').dt.strftime('%d %b %Y')
+    else:
+        # Gunakan tanggal hari ini jika tidak ada kolom created_at
+        df['date'] = datetime.now().strftime('%d %b %Y')
+    
+    # Tambahkan kolom untuk likes, retweets, dan replies jika tidak ada
+    if 'favorite_count' not in df.columns:
+        df['favorite_count'] = 0
+    if 'retweet_count' not in df.columns:
+        df['retweet_count'] = 0
+    if 'reply_count' not in df.columns:
+        df['reply_count'] = 0
+    
+    # Ganti nama kolom untuk konsistensi dalam UI
+    rename_columns = {
+        'screen_name': 'username',
+        'favorite_count': 'likes',
+        'retweet_count': 'retweets',
+        'reply_count': 'replies',
+        text_column: 'content'
+    }
+    df = df.rename(columns={col: new_col for col, new_col in rename_columns.items() if col in df.columns})
+    
+    # Pastikan semua kolom yang diperlukan ada
+    required_cols = ['username', 'content', 'date', 'likes', 'retweets', 'replies', 'predicted_sentiment', 'confidence']
+    for col in required_cols:
+        if col not in df.columns:
+            if col == 'username':
+                df['username'] = 'user' + df.index.astype(str)
+            else:
+                df[col] = 0 if col in ['likes', 'retweets', 'replies', 'confidence'] else ''
+    
+    # Ensure tweet URL is available
+    if 'tweet_url' not in df.columns and 'id_str' in df.columns:
+        df['tweet_url'] = 'https://twitter.com/i/web/status/' + df['id_str'].astype(str)
+    
+    # Ensure image URL is available
+    if 'image_url' not in df.columns and 'media_url' in df.columns:
+        df['image_url'] = df['media_url']
+    
+    print("Prediksi selesai.")
+    
+    # Simpan hasil ke cache
+    _analysis_cache[file_hash] = (current_time, df)
+    
+    return df
 
 def load_sentiment_model(model_name='indolem/indobert-base-uncased'):
     """

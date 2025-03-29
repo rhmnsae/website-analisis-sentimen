@@ -28,6 +28,7 @@ def create_app(config_file=None):
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     os.makedirs(app.config['SESSION_FILE_DIR'], exist_ok=True)
     os.makedirs(app.config['MODEL_FOLDER'], exist_ok=True)
+    os.makedirs(os.path.join(os.getcwd(), 'locks'), exist_ok=True) 
     
     # Setup session
     Session(app)
