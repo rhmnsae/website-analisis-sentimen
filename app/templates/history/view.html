@@ -1908,100 +1908,7 @@
     }
 
     // Generate topic buttons for chatbot
-    function generateTopicButtons(data) {
-        const chatbotTopicButtons = document.getElementById('chatbot-topic-buttons');
-        if (!chatbotTopicButtons) return;
-        
-        chatbotTopicButtons.innerHTML = '';
-        
-        // Base topics on hashtags, top words, and key program areas
-        const topics = new Set();
-        
-        // Add from hashtags
-        if (data.top_hashtags && data.top_hashtags.length > 0) {
-            data.top_hashtags.slice(0, 7).forEach(hashtag => {
-                const topic = hashtag.tag ? hashtag.tag.replace('#', '') : (typeof hashtag === 'string' ? hashtag.replace('#', '') : '');
-                if (topic) topics.add(topic);
-            });
-        }
-        
-        // Add from topics
-        if (data.topics && data.topics.length > 0) {
-            data.topics.slice(0, 7).forEach(topic => {
-                const topicText = typeof topic === 'object' ? topic.topic : topic;
-                if (topicText) topics.add(topicText);
-            });
-        }
-        
-        // Get words from each sentiment category
-        if (data.sentiment_words) {
-            // Add top positive words
-            if (data.sentiment_words.positive && data.sentiment_words.positive.length > 0) {
-                data.sentiment_words.positive.slice(0, 3).forEach(item => {
-                    const word = typeof item === 'object' ? item.word : item;
-                    if (word && word.length > 3) {
-                        topics.add(word);
-                    }
-                });
-            }
-            
-            // Add top negative words
-            if (data.sentiment_words.negative && data.sentiment_words.negative.length > 0) {
-                data.sentiment_words.negative.slice(0, 3).forEach(item => {
-                    const word = typeof item === 'object' ? item.word : item;
-                    if (word && word.length > 3) {
-                        topics.add(word);
-                    }
-                });
-            }
-        }
-        
-        // Tambahkan topik default jika tidak ada topik yang ditemukan
-        if (topics.size === 0) {
-            topics.add("kebijakan publik");
-            topics.add("sentimen masyarakat");
-            topics.add("respon pemerintah");
-            topics.add("komunikasi publik");
-        }
-        
-        const topicIcons = {
-            'default': ''
-        };
-        
-        Array.from(topics).forEach(topic => {
-            const button = document.createElement('button');
-            button.className = 'topic-button animate-fade-in';
-            button.setAttribute('data-topic', topic);
-            
-            // Select icon based on topic or use default
-            const iconHtml = topicIcons[topic] || topicIcons['default'];
-            
-            button.innerHTML = `${iconHtml} ${topic}`;
-            button.addEventListener('click', function() {
-                const chatbotInput = document.getElementById('chatbot-input');
-                if (chatbotInput) {
-                    chatbotInput.value = `Berikan evaluasi kebijakan terkait ${topic}`;
-                    // Panggil fungsi sendChatbotMessage dengan berbagai cara
-                    if (typeof sendChatbotMessage === 'function') {
-                        sendChatbotMessage();
-                    } else if (window.sendChatbotMessage) {
-                        window.sendChatbotMessage();
-                    } else {
-                        const chatbotSend = document.getElementById('chatbot-send');
-                        if (chatbotSend) chatbotSend.click();
-                    }
-                }
-            });
-            
-            chatbotTopicButtons.appendChild(button);
-        });
-        
-        // Tambahkan pesan di bawah topik-topik
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'text-center w-100 mt-2 mb-2 animate-fade-in';
-        messageDiv.innerHTML = '<small class="text-muted">Topik diatas dibuat otomatis dari data yang dianalisa</small>';
-        chatbotTopicButtons.appendChild(messageDiv);
-    }
+    
 
     function addTopicGenerationToUIUpdate() {
         const isViewPage = window.location.pathname.includes('/history/') && 
@@ -2200,6 +2107,170 @@
         );
         
         return processedText;
+    }
+
+    // Perbaikan untuk fungsi generateTopicButtons di view.html
+
+    function generateTopicButtons(data) {
+        const chatbotTopicButtons = document.getElementById('chatbot-topic-buttons');
+        if (!chatbotTopicButtons) return;
+        
+        // Hapus semua child node dan event listener yang ada
+        chatbotTopicButtons.innerHTML = '';
+        
+        // Base topics on hashtags, top words, and key program areas
+        const topics = new Set();
+        
+        // Add from hashtags
+        if (data.top_hashtags && data.top_hashtags.length > 0) {
+            data.top_hashtags.slice(0, 7).forEach(hashtag => {
+                const topic = hashtag.tag ? hashtag.tag.replace('#', '') : (typeof hashtag === 'string' ? hashtag.replace('#', '') : '');
+                if (topic) topics.add(topic);
+            });
+        }
+        
+        // Add from topics
+        if (data.topics && data.topics.length > 0) {
+            data.topics.slice(0, 7).forEach(topic => {
+                const topicText = typeof topic === 'object' ? topic.topic : topic;
+                if (topicText) topics.add(topicText);
+            });
+        }
+        
+        // Get words from each sentiment category
+        if (data.sentiment_words) {
+            // Add top positive words
+            if (data.sentiment_words.positive && data.sentiment_words.positive.length > 0) {
+                data.sentiment_words.positive.slice(0, 3).forEach(item => {
+                    const word = typeof item === 'object' ? item.word : item;
+                    if (word && word.length > 3) {
+                        topics.add(word);
+                    }
+                });
+            }
+            
+            // Add top negative words
+            if (data.sentiment_words.negative && data.sentiment_words.negative.length > 0) {
+                data.sentiment_words.negative.slice(0, 3).forEach(item => {
+                    const word = typeof item === 'object' ? item.word : item;
+                    if (word && word.length > 3) {
+                        topics.add(word);
+                    }
+                });
+            }
+        }
+        
+        // Tambahkan topik default jika tidak ada topik yang ditemukan
+        if (topics.size === 0) {
+            topics.add("kebijakan publik");
+            topics.add("sentimen masyarakat");
+            topics.add("respon pemerintah");
+            topics.add("komunikasi publik");
+        }
+        
+        const topicIcons = {
+            'default': ''
+        };
+        
+        // PERBAIKAN UTAMA: Kita akan menggunakan flag untuk mencegah duplikasi pengiriman pesan
+        // dan memastikan bahwa click handler dibuat sekali saja
+        Array.from(topics).forEach(topic => {
+            const button = document.createElement('button');
+            button.className = 'topic-button animate-fade-in';
+            button.setAttribute('data-topic', topic);
+            
+            // Select icon based on topic or use default
+            const iconHtml = topicIcons[topic] || topicIcons['default'];
+            
+            button.innerHTML = `${iconHtml} ${topic}`;
+            
+            // Tambahkan listener tanpa arrow function dan dengan flag untuk mencegah duplikasi
+            button.addEventListener('click', function(e) {
+                // Mencegah event bubbling
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Dapatkan referensi ke elemen yang diperlukan
+                const chatbotInput = document.getElementById('chatbot-input');
+                
+                if (chatbotInput) {
+                    // Set nilai input dan pastikan tidak ada referensi lain yang mengubahnya
+                    chatbotInput.value = `Berikan evaluasi kebijakan terkait ${topic}`;
+                    
+                    // Gunakan pendekatan langsung untuk mengirim pesan
+                    const chatbotMessages = document.getElementById('chatbot-messages');
+                    if (!chatbotMessages) return;
+                    
+                    const messageText = chatbotInput.value.trim();
+                    if (!messageText) return;
+                    
+                    // Tambahkan pesan pengguna ke chat
+                    const userMessage = document.createElement('div');
+                    userMessage.className = 'message message-user animate-fade-in';
+                    userMessage.textContent = messageText;
+                    chatbotMessages.appendChild(userMessage);
+                    
+                    // Kosongkan input
+                    chatbotInput.value = '';
+                    
+                    // Tambahkan indikator loading
+                    const loadingMessage = document.createElement('div');
+                    loadingMessage.className = 'message message-bot animate-fade-in';
+                    loadingMessage.innerHTML = '<div class="d-flex align-items-center"><div class="spinner-grow spinner-grow-sm me-2" role="status"></div><span>Menganalisis data dan menyusun respons...</span></div>';
+                    chatbotMessages.appendChild(loadingMessage);
+                    
+                    // Scroll ke bawah
+                    chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+                    
+                    // Kirim ke server secara langsung, tanpa menggunakan fungsi lain
+                    fetch('/chatbot', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({message: messageText})
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Hapus pesan loading
+                        chatbotMessages.removeChild(loadingMessage);
+                        
+                        // Format teks respons dengan line break dan formatting yang tepat
+                        const formattedResponse = formatChatbotResponse(data.response);
+                        
+                        // Tambahkan respons bot dengan animasi
+                        const botMessage = document.createElement('div');
+                        botMessage.className = 'message message-bot animate-fade-in';
+                        botMessage.innerHTML = formattedResponse;
+                        chatbotMessages.appendChild(botMessage);
+                        
+                        // Scroll ke bawah
+                        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+                    })
+                    .catch(error => {
+                        // Hapus pesan loading
+                        chatbotMessages.removeChild(loadingMessage);
+                        
+                        // Tambahkan pesan error
+                        const errorMessage = document.createElement('div');
+                        errorMessage.className = 'message message-bot animate-fade-in';
+                        errorMessage.textContent = 'Maaf, terjadi kesalahan dalam berkomunikasi dengan chatbot. Silakan coba lagi.';
+                        chatbotMessages.appendChild(errorMessage);
+                        
+                        // Scroll ke bawah
+                        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+                    });
+                }
+            });
+            
+            chatbotTopicButtons.appendChild(button);
+        });
+        
+        // Tambahkan pesan di bawah topik-topik
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'text-center w-100 mt-2 mb-2 animate-fade-in';
+        messageDiv.innerHTML = '<small class="text-muted">Topik diatas dibuat otomatis dari data yang dianalisa</small>';
+        chatbotTopicButtons.appendChild(messageDiv);
     }
 
     // Set up event handlers for the download report button
