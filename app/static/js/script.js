@@ -1440,14 +1440,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const wordCloudContainer = document.getElementById('word-cloud-container');
         if (!wordCloudContainer || !data || !data.tweets || data.tweets.length === 0) return;
         
-        // Atur tinggi fixed tapi lebih rendah untuk landscape layout
-        wordCloudContainer.style.height = '500px';
-        
-        // Tambahkan padding lebih besar di kiri dan kanan untuk menggunakan space landscape
-        wordCloudContainer.style.padding = '20px 60px'; // 60px padding kiri & kanan, 20px atas & bawah
-        
         // Add loading indicator
         wordCloudContainer.innerHTML = '<div class="chart-loader"><div class="spinner"></div></div>';
+        
+        // Check if d3 is available
+        if (typeof d3 === 'undefined') {
+            wordCloudContainer.innerHTML = '<p class="text-center text-muted my-5">D3.js library is not available. Word cloud cannot be generated.</p>';
+            return;
+        }
         
         // Create word frequency counts
         const wordFrequencies = {};
@@ -1464,7 +1464,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Process each tweet to extract words
         data.tweets.forEach(tweet => {
-            if (!tweet.content) return;
+            if (!tweet || !tweet.content) return;
             
             // Extract words from content
             let content = tweet.content.toLowerCase();
@@ -1480,6 +1480,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Filter words
             const filteredWords = words.filter(word => 
+                word && 
                 word.length > 3 &&  // Filter words with length > 3
                 !stopwords.includes(word) &&  // Filter out stopwords
                 !/^\d+$/.test(word)  // Filter out numbers
@@ -1496,7 +1497,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .map(([text, value]) => ({ text, value }))
             .filter(item => item.value > 1)  // Filter words that appear more than once
             .sort((a, b) => b.value - a.value)
-            .slice(0, 60);  // Kurangi jumlah kata agar tampilan lebih lega
+            .slice(0, 100);  // Limit to top 100 words
         
         if (wordsArray.length === 0) {
             wordCloudContainer.innerHTML = '<p class="text-center text-muted my-5">Tidak cukup data untuk menampilkan word cloud.</p>';
@@ -1506,42 +1507,46 @@ document.addEventListener('DOMContentLoaded', function() {
         // Normalize word sizes between minSize and maxSize
         const minCount = Math.min(...wordsArray.map(w => w.value));
         const maxCount = Math.max(...wordsArray.map(w => w.value));
-        const minSize = 20;   // Ukuran minimum font lebih besar
-        const maxSize = 90;   // Ukuran maksimum font lebih besar
+        const minSize = 12;
+        const maxSize = 60;
         
         // Adjust word sizes
         wordsArray.forEach(word => {
             // Normalize size
-            const size = minSize + ((word.value - minCount) / (maxCount - minCount)) * (maxSize - minSize);
+            const size = minSize + ((word.value - minCount) / (maxCount - minCount || 1)) * (maxSize - minSize);
             word.size = size;
             
             // Assign a color based on sentiment association
             // Use a black/gray scale for the monochrome theme
-            const intensity = Math.round((word.value - minCount) / (maxCount - minCount) * 200);
+            const intensity = Math.round((word.value - minCount) / (maxCount - minCount || 1) * 200);
             word.color = `rgb(${intensity}, ${intensity}, ${intensity})`;
         });
         
-        // Create SVG element
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('width', '100%');
-        svg.setAttribute('height', '100%');
-        svg.style.opacity = 0;
-        wordCloudContainer.innerHTML = ''; // Bersihkan container
-        wordCloudContainer.appendChild(svg);
-        
-        // Dapatkan lebar dan tinggi yang sebenarnya dari container
-        const width = wordCloudContainer.clientWidth || 800;
-        const height = wordCloudContainer.clientHeight || 400;
-        
         try {
+            // Create SVG element
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', '100%');
+            svg.setAttribute('height', '100%');
+            svg.style.opacity = 0;
+            wordCloudContainer.innerHTML = '';
+            wordCloudContainer.appendChild(svg);
+            
+            // Set up word cloud layout
+            const width = wordCloudContainer.clientWidth || 500;
+            const height = wordCloudContainer.clientHeight || 400;
+            
+            // Check if d3.layout.cloud is available
+            if (typeof d3.layout.cloud !== 'function') {
+                wordCloudContainer.innerHTML = '<p class="text-center text-muted my-5">d3-cloud library is not available. Word cloud cannot be generated.</p>';
+                return;
+            }
+            
             // Use d3.layout.cloud for the word cloud
-            // Gunakan padding lebih besar untuk jarak horizontal yang lebih lega
             const layout = d3.layout.cloud()
                 .size([width, height])
                 .words(wordsArray)
-                .padding(25)  // Padding antar kata yang jauh lebih besar
-                .rotate(() => 0) // Sebagian besar kata horizontal untuk layout landscape
-                .spiral('rectangular') // Gunakan spiral rectangular untuk memanfaatkan bentuk landscape
+                .padding(5)
+                .rotate(() => Math.random() < 0.5 ? 0 : 90)
                 .font('Inter')
                 .fontSize(d => d.size)
                 .on('end', draw);
@@ -1549,65 +1554,32 @@ document.addEventListener('DOMContentLoaded', function() {
             layout.start();
             
             function draw(words) {
-                // Remove loading spinner jika masih ada
+                // Remove loading spinner
                 const loadingIndicator = wordCloudContainer.querySelector('.chart-loader');
                 if (loadingIndicator) {
                     wordCloudContainer.removeChild(loadingIndicator);
                 }
                 
-                // Tambahkan margin horizontal lebih besar untuk memastikan kata-kata tidak terlalu ke pinggir
-                const horizontalMargin = width * 0.1; // 10% margin dari lebar
-                
                 d3.select(svg)
                     .attr('width', layout.size()[0])
                     .attr('height', layout.size()[1])
                     .append('g')
-                    .attr('transform', `translate(${layout.size()[0] / 2},${layout.size()[1] / 2})`) // Center semua kata
+                    .attr('transform', `translate(${layout.size()[0] / 2},${layout.size()[1] / 2})`)
                     .selectAll('text')
                     .data(words)
                     .enter()
                     .append('text')
                     .style('font-size', d => `${d.size}px`)
                     .style('font-family', 'Inter, sans-serif')
-                    .style('font-weight', d => Math.min(900, 300 + Math.floor(d.size * 7)))
+                    .style('font-weight', d => Math.min(900, 300 + Math.floor(d.size * 10)))
                     .style('fill', d => d.color)
-                    .style('letter-spacing', '1px') // Tambahkan letter spacing untuk keterbacaan
                     .attr('text-anchor', 'middle')
-                    .attr('transform', d => {
-                        // Batasi posisi horizontal agar tidak terlalu ke tepi
-                        const x = Math.max(Math.min(d.x, width/2 - horizontalMargin), -width/2 + horizontalMargin);
-                        return `translate(${x},${d.y}) rotate(${d.rotate})`;
-                    })
+                    .attr('transform', d => `translate(${d.x},${d.y}) rotate(${d.rotate})`)
                     .text(d => d.text)
                     .style('opacity', 0)
                     .transition()
-                    .duration(800)
-                    .delay((d, i) => i * 30) // Delay lebih lama untuk efek bertahap
-                    .style('opacity', 1)
-                    .on('end', function(d) {
-                        // Tambahkan interaktivitas setelah animasi selesai
-                        d3.select(this)
-                            .style('cursor', 'pointer')
-                            .on('mouseover', function(d) {
-                                d3.select(this)
-                                    .transition()
-                                    .duration(200)
-                                    .style('font-size', function() {
-                                        return (parseFloat(d3.select(this).style('font-size')) * 1.3) + 'px';
-                                    })
-                                    .style('fill', '#000');
-                            })
-                            .on('mouseout', function(d) {
-                                d3.select(this)
-                                    .transition()
-                                    .duration(300)
-                                    .style('font-size', function() { 
-                                        // Kembali ke ukuran asli
-                                        return d.size + 'px';
-                                    })
-                                    .style('fill', d.color);
-                            });
-                    });
+                    .duration(1000)
+                    .style('opacity', 1);
                 
                 // Fade in the SVG
                 svg.style.transition = 'opacity 1s ease';
@@ -1615,31 +1587,27 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } catch (error) {
             console.error("Error creating word cloud:", error);
-            // Fallback to simple word display dengan layout yang lebih lebar
+            // Fallback to simple word display
             wordCloudContainer.innerHTML = '';
             
             const wordCloudFallback = document.createElement('div');
             wordCloudFallback.className = 'd-flex flex-wrap justify-content-center align-items-center h-100';
-            wordCloudFallback.style.padding = '20px 80px'; // Padding horizontal yang lebih besar
             
-            wordsArray.slice(0, 40).forEach((word, index) => {
+            wordsArray.slice(0, 50).forEach((word, index) => {
                 const wordSpan = document.createElement('span');
                 wordSpan.textContent = word.text;
-                wordSpan.style.fontSize = `${(word.size / 10) * 1.5}rem`; // 1.5x lebih besar dari sebelumnya
+                wordSpan.style.fontSize = `${word.size / 10}rem`;
                 wordSpan.style.fontWeight = Math.min(900, 300 + Math.floor(word.size * 10));
                 wordSpan.style.color = word.color;
-                wordSpan.style.padding = '10px 25px'; // Padding horizontal yang jauh lebih besar
-                wordSpan.style.margin = '12px 20px'; // Margin horizontal yang lebih besar
-                wordSpan.style.letterSpacing = '1px'; // Letter spacing untuk keterbacaan yang lebih baik
+                wordSpan.style.padding = '5px';
                 wordSpan.style.display = 'inline-block';
                 wordSpan.style.transition = 'all 0.3s ease';
                 wordSpan.style.opacity = 0;
                 wordSpan.style.transform = 'translateY(20px)';
                 
                 wordSpan.addEventListener('mouseover', function() {
-                    this.style.transform = 'scale(1.3)';
+                    this.style.transform = 'scale(1.2)';
                     this.style.color = '#000000';
-                    this.style.cursor = 'pointer';
                 });
                 
                 wordSpan.addEventListener('mouseout', function() {

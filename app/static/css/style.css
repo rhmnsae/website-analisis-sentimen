@@ -1641,3 +1641,26 @@ body > .modal {
 #deleteModal .modal-icon {
     color: var(--primary-color);
 }
+
+/* Styling untuk loading overlay navigasi (simple) */
+.loading-overlay .simple-loader {
+    background-color: transparent !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+}
+
+.loading-overlay .simple-loader .spinner-border {
+    width: 4rem;
+    height: 4rem;
+}
+
+#loading-overlay .loading-content:not(.simple-loader) {
+    background-color: white;
+    border-radius: 10px;
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    max-width: 90%;
+    width: 400px;
+    animation: fadeInUp 0.5s ease;
+}

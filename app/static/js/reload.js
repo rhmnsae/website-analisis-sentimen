@@ -93,12 +93,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const overlay = document.createElement('div');
         overlay.id = 'page-loading-overlay';
         overlay.className = 'loading-overlay';
+        // Ubah menjadi loading bulat sederhana saja
         overlay.innerHTML = `
-            <div class="loading-content">
-                <div class="spinner-border text-light spinner-border-lg" role="status">
+            <div class="loading-content simple-loader">
+                <div class="spinner-border text-light" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
-                <p class="mt-3 text-white">Memuat halaman...</p>
             </div>
         `;
         document.body.appendChild(overlay);
@@ -127,9 +127,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     text-align: center;
                 }
                 
-                .loading-overlay .spinner-border-lg {
+                .loading-overlay .spinner-border {
                     width: 3rem;
                     height: 3rem;
+                }
+                
+                /* Style untuk simple loader (hanya spinner) */
+                .simple-loader {
+                    background-color: transparent;
+                    box-shadow: none;
                 }
                 
                 .fade-out {
