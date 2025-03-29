@@ -377,6 +377,62 @@ document.addEventListener('DOMContentLoaded', function() {
         
         paginationContainer.appendChild(paginationInfo);
     }
+
+    function isDataLoaded() {
+        // Periksa apakah elemen-elemen utama telah diisi dengan nilai bukan 0
+        const totalTweets = document.getElementById('total-tweets');
+        const positiveCount = document.getElementById('positive-count');
+        const neutralCount = document.getElementById('neutral-count');
+        const negativeCount = document.getElementById('negative-count');
+        
+        if (!totalTweets || !positiveCount || !neutralCount || !negativeCount) {
+            console.log("Elemen data belum ditemukan di DOM");
+            return false;
+        }
+        
+        // Periksa apakah nilai sudah diisi (bukan 0)
+        const totalValue = parseInt(totalTweets.textContent) || 0;
+        const positiveValue = parseInt(positiveCount.textContent) || 0;
+        const neutralValue = parseInt(neutralCount.textContent) || 0;
+        const negativeValue = parseInt(negativeCount.textContent) || 0;
+        
+        console.log("Memeriksa data: ", {
+            total: totalValue,
+            positive: positiveValue,
+            neutral: neutralValue,
+            negative: negativeValue
+        });
+        
+        // Periksa apakah setidaknya total tweets sudah diisi
+        return totalValue > 0;
+    }
+    
+    // Fungsi untuk menyembunyikan overlay loading
+    function hideLoadingOverlay() {
+        const loadingOverlay = document.getElementById('loading-overlay');
+        if (!loadingOverlay) return;
+        
+        // Periksa apakah data sudah dimuat dengan benar
+        if (!isDataLoaded()) {
+            console.log("Data belum dimuat dengan benar, menunda penutupan loading overlay");
+            // Tunda penutupan loading dan coba lagi setelah 1 detik
+            setTimeout(hideLoadingOverlay, 1000);
+            return;
+        }
+        
+        console.log("Data telah dimuat dengan benar, menutup loading overlay");
+        
+        // Tampilkan step terakhir
+        updateLoadingStatus(4, "Analisis berhasil dimuat!");
+        
+        // Tunggu sebentar lalu fade out
+        setTimeout(() => {
+            loadingOverlay.classList.add('fade-out');
+            setTimeout(() => {
+                loadingOverlay.style.display = 'none';
+            }, 500);
+        }, 500);
+    }
     
     // Display tweets for current page
     function displayTweets() {
@@ -2258,10 +2314,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         return response.json();
                     })
                     .then(data => {
-                        updateLoadingStatus(4, "Menampilkan hasil analisis...");
-                        setTimeout(() => {
-                            resolve(data);
-                        }, 500); // Delay kecil sebelum menyelesaikan loading
+                        updateLoadingStatus(3, "Menampilkan hasil analisis...");
+                        resolve(data);
                     })
                     .catch(error => {
                         clearTimeout(timeoutId);
@@ -2305,8 +2359,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         if (loadingStatus) {
-            loadingStatus.textContent = message;
+            // Animasi fade out lalu fade in dengan pesan baru
+            loadingStatus.style.transition = 'opacity 0.3s ease';
+            loadingStatus.style.opacity = 0;
+            
+            setTimeout(() => {
+                loadingStatus.textContent = message;
+                loadingStatus.style.opacity = 1;
+            }, 300);
         }
+        
+        console.log(`Loading status update: Step ${step} - ${message}`);
     }
 
     // Fungsi untuk menampilkan overlay loading
@@ -2325,46 +2388,53 @@ document.addEventListener('DOMContentLoaded', function() {
             const loadingProgress = document.getElementById('loading-progress');
             if (loadingProgress) {
                 loadingProgress.classList.remove('progress-step-1', 'progress-step-2', 'progress-step-3', 'progress-step-4');
-                loadingProgress.style.width = '0%';
+                loadingProgress.classList.add('progress-step-1');
             }
         } else {
             // Buat overlay baru jika belum ada
             const overlay = document.createElement('div');
             overlay.id = 'loading-overlay';
-            overlay.className = 'position-absolute top-0 left-0 w-100 h-100 d-flex justify-content-center align-items-center bg-light bg-opacity-75';
+            overlay.className = 'loading-overlay';
             overlay.style.zIndex = '1000';
             
             overlay.innerHTML = `
-                <div class="text-center">
-                    <div class="spinner-border text-dark mb-3" role="status" style="width: 3rem; height: 3rem;">
+                <div class="loading-content">
+                    <div class="spinner-border loading-spinner text-dark" role="status">
                         <span class="visually-hidden">Loading...</span>
                     </div>
-                    <h5 class="mb-2">Memuat Data</h5>
-                    <p class="text-muted">${message}</p>
-                    <div class="progress mt-3" style="height: 8px; width: 250px;">
-                        <div id="loading-progress" class="progress-bar progress-bar-striped progress-bar-animated bg-dark" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    <h5 class="loading-title">Memuat Data</h5>
+                    <p class="loading-message">${message}</p>
+                    <div class="loading-progress-container">
+                        <div id="loading-progress" class="loading-progress-bar progress-step-1"></div>
                     </div>
-                    <small class="text-muted mt-2" id="loading-status">Mengunduh dan menyiapkan data...</small>
+                    <small class="loading-status" id="loading-status">Mengunduh dan menyiapkan data...</small>
                 </div>
             `;
             
-            const container = document.querySelector('.card-body');
-            if (container) {
-                container.style.position = 'relative';
-                container.appendChild(overlay);
-            }
+            document.body.appendChild(overlay);
         }
     }
 
     // Fungsi untuk menyembunyikan overlay loading
     function hideLoadingOverlay() {
         const loadingOverlay = document.getElementById('loading-overlay');
-        if (loadingOverlay) {
-            loadingOverlay.classList.add('fade-out');
+        if (!loadingOverlay) return;
+        
+        // Tampilkan step terakhir sejenak sebelum menghilang
+        updateLoadingStatus(4, "Analisis berhasil dimuat!");
+        
+        // Tunggu lebih lama untuk memberi waktu user membaca pesan sukses
+        setTimeout(() => {
+            // Animasi fade-out yang halus
+            loadingOverlay.style.transition = 'opacity 0.8s ease';
+            loadingOverlay.style.opacity = '0';
+            
+            // Hapus dari DOM setelah animasi selesai
             setTimeout(() => {
                 loadingOverlay.style.display = 'none';
-            }, 500);
-        }
+                console.log("Loading overlay removed");
+            }, 800);
+        }, 1000);
     }
 
     // Fungsi untuk menampilkan pesan error
@@ -2437,20 +2507,67 @@ document.addEventListener('DOMContentLoaded', function() {
             analysisResults = data;
             allTweets = data.tweets || [];
             
-            // Update UI with analysis results
-            updateAnalysisResults(data);
+            // Step 1: Update loading status
+            updateLoadingStatus(3, "Memproses data dan mempersiapkan visualisasi...");
             
-            // Initialize pagination
-            initializePagination();
-            
-            // Generate topics automatically
-            generateTopics(data);
-            
-            // Create word cloud
-            createImprovedWordCloud(data);
-            
-            // Sembunyikan loading setelah semua diproses
-            hideLoadingOverlay();
+            // Step 2: Persiapkan UI dengan data dasar
+            setTimeout(() => {
+                // Update UI with analysis results
+                updateAnalysisResults(data);
+                
+                // Initialize pagination
+                initializePagination();
+                
+                // Step 3: Generate topics dan siapkan visualisasi
+                updateLoadingStatus(3, "Membuat visualisasi dan chart...");
+                
+                setTimeout(() => {
+                    try {
+                        // Generate topics automatically
+                        generateTopics(data);
+                        
+                        // Create word cloud
+                        createImprovedWordCloud(data);
+                        
+                        // Step 4: Finalisasi dan pastikan semua data sudah ditampilkan
+                        updateLoadingStatus(4, "Menyelesaikan rendering data...");
+                        
+                        // Cek apakah semua elemen penting sudah terisi dengan data
+                        const checkDataLoaded = () => {
+                            const totalTweetsEl = document.getElementById('total-tweets');
+                            const mainTopicsEl = document.getElementById('main-topics');
+                            const hashtags = document.getElementById('top-hashtags');
+                            
+                            // Cek apakah elemen-elemen utama sudah berisi data
+                            if (totalTweetsEl && totalTweetsEl.textContent !== '0' &&
+                                mainTopicsEl && mainTopicsEl.children.length > 0 &&
+                                hashtags && hashtags.children.length > 0) {
+                                
+                                console.log("Data terverifikasi sudah dimuat dengan benar");
+                                
+                                // Tambahan delay untuk memastikan render visual selesai
+                                setTimeout(() => {
+                                    hideLoadingOverlay();
+                                }, 1500);
+                            } else {
+                                console.log("Menunggu data selesai dirender...");
+                                // Cek lagi setelah sedikit delay
+                                setTimeout(checkDataLoaded, 500);
+                            }
+                        };
+                        
+                        // Mulai mengecek apakah data sudah dimuat
+                        setTimeout(checkDataLoaded, 1000);
+                        
+                    } catch (error) {
+                        console.error("Error during visualization rendering:", error);
+                        updateLoadingStatus(4, "Rendering visualisasi (beberapa komponen mungkin tidak dimuat)");
+                        setTimeout(() => {
+                            hideLoadingOverlay();
+                        }, 1500);
+                    }
+                }, 1000);
+            }, 1000);
         })
         .catch(error => {
             console.error('Error:', error);

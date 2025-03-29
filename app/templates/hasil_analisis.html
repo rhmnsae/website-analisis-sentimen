@@ -200,7 +200,13 @@
                         Distribusi Sentimen
                     </h5>
                     <div class="chart-container text-center">
-                        <img id="sentiment-plot" src="" alt="Grafik Distribusi Sentimen" class="img-fluid">
+                        <img id="sentiment-plot" src="" alt="Grafik Distribusi Sentimen" class="img-fluid d-none">
+                        <div class="text-center py-4 sentiment-plot-loading">
+                            <div class="spinner-border text-dark" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Memuat visualisasi...</p>
+                        </div>
                     </div>
                 </div>
                                             
@@ -215,7 +221,14 @@
                         Sentimen Berdasarkan Hashtag
                     </h5>
                     <div class="chart-container">
-                        <div id="sentiment-by-hashtag-chart"></div>
+                        <div id="sentiment-by-hashtag-chart">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-dark" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Memuat visualisasi...</p>
+                            </div>
+                        </div>
                     </div>
                 </div>   
                 
@@ -226,7 +239,14 @@
                             Sentimen Berdasarkan Lokasi (Top 5)
                         </h5>
                         <div class="chart-container">
-                            <div id="sentiment-by-location-chart"></div>
+                            <div id="sentiment-by-location-chart">
+                                <div class="text-center py-4">
+                                    <div class="spinner-border text-dark" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2">Memuat visualisasi...</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -235,7 +255,14 @@
                             Sentimen Berdasarkan Bahasa (Top 5)
                         </h5>
                         <div class="chart-container">
-                            <div id="sentiment-by-language-chart"></div>
+                            <div id="sentiment-by-language-chart">
+                                <div class="text-center py-4">
+                                    <div class="spinner-border text-dark" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2">Memuat visualisasi...</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -247,6 +274,12 @@
                     <h5 class="section-title word-cloud-title">Word Cloud</h5>
                     <div class="word-cloud-container" id="word-cloud-container">
                         <!-- Word cloud will be rendered here -->
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-dark" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Memuat word cloud...</p>
+                        </div>
                     </div>
                 </div>
                 
@@ -258,6 +291,12 @@
                         </h5>
                         <div class="chart-container" id="positive-words-chart">
                             <!-- Chart will be rendered here -->
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-dark" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Memuat analisis kata...</p>
+                            </div>
                         </div>
                     </div>
                     
@@ -268,6 +307,12 @@
                         </h5>
                         <div class="chart-container" id="neutral-words-chart">
                             <!-- Chart will be rendered here -->
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-dark" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Memuat analisis kata...</p>
+                            </div>
                         </div>
                     </div>
                     
@@ -278,6 +323,12 @@
                         </h5>
                         <div class="chart-container" id="negative-words-chart">
                             <!-- Chart will be rendered here -->
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-dark" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Memuat analisis kata...</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -294,140 +345,342 @@
 
 {% block scripts %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Definisikan loading overlay
-        const loadingOverlay = document.getElementById('loading-overlay');
-        const loadingProgress = document.getElementById('loading-progress');
-        const loadingStatus = document.getElementById('loading-status');
+    // Fungsi untuk memeriksa apakah data telah dimuat dengan benar
+    function isDataLoaded() {
+        // Periksa apakah elemen-elemen utama telah diisi dengan nilai bukan 0
+        const totalTweets = document.getElementById('total-tweets');
+        const positiveCount = document.getElementById('positive-count');
+        const neutralCount = document.getElementById('neutral-count');
+        const negativeCount = document.getElementById('negative-count');
         
-        // Fungsi untuk update status loading
-        function updateLoadingStatus(step, message) {
-            if (loadingProgress) {
-                loadingProgress.classList.remove('progress-step-1', 'progress-step-2', 'progress-step-3', 'progress-step-4');
-                loadingProgress.classList.add(`progress-step-${step}`);
-            }
-            
-            if (loadingStatus) {
-                // Animasi fade out lalu fade in dengan pesan baru
-                loadingStatus.style.transition = 'opacity 0.3s ease';
-                loadingStatus.style.opacity = 0;
-                
-                setTimeout(() => {
-                    loadingStatus.textContent = message;
-                    loadingStatus.style.opacity = 1;
-                }, 300);
-            }
+        if (!totalTweets || !positiveCount || !neutralCount || !negativeCount) {
+            console.log("Elemen data belum ditemukan di DOM");
+            return false;
         }
         
-        // Mulai dengan step 1
-        updateLoadingStatus(1, "Mengunduh dan menyiapkan data...");
+        // Periksa apakah nilai sudah diisi (bukan 0)
+        const totalValue = parseInt(totalTweets.textContent) || 0;
+        const positiveValue = parseInt(positiveCount.textContent) || 0;
+        const neutralValue = parseInt(neutralCount.textContent) || 0;
+        const negativeValue = parseInt(negativeCount.textContent) || 0;
         
-        // Tambahkan timeout untuk step berikutnya untuk simulasi progress
+        console.log("Memeriksa data: ", {
+            total: totalValue,
+            positive: positiveValue,
+            neutral: neutralValue,
+            negative: negativeValue
+        });
+        
+        // Periksa apakah setidaknya total tweets sudah diisi
+        return totalValue > 0;
+    }
+
+    // Fungsi untuk menyembunyikan overlay loading
+    function hideLoadingOverlay() {
+        const loadingOverlay = document.getElementById('loading-overlay');
+        if (!loadingOverlay) return;
+        
+        // Periksa apakah data sudah dimuat dengan benar
+        if (!isDataLoaded()) {
+            console.log("Data belum dimuat dengan benar, menunda penutupan loading overlay");
+            // Tunda penutupan loading dan coba lagi setelah 1 detik
+            setTimeout(hideLoadingOverlay, 1000);
+            return;
+        }
+        
+        console.log("Data telah dimuat dengan benar, menutup loading overlay");
+        
+        // Tampilkan step terakhir
+        updateLoadingStatus(4, "Analisis berhasil dimuat!");
+        
+        // Tunggu sebentar lalu fade out
         setTimeout(() => {
-            updateLoadingStatus(2, "Menginisialisasi komponen visual...");
-            
-            // Fetch analysis data setelah delay pendek
+            loadingOverlay.classList.add('fade-out');
             setTimeout(() => {
-                fetchAnalysisData();
-            }, 300);
-        }, 800);
+                loadingOverlay.style.display = 'none';
+            }, 500);
+        }, 500);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const MIN_LOADING_TIME = 8000; // Minimal 8 detik loading
+        const DATA_CHECK_INTERVAL = 500; // Cek setiap 500ms
+        const MAX_LOADING_TIME = 30000; // Maksimum 30 detik loading
+        const MIN_RENDER_DELAY = 3000; // Minimum 3 detik delay sebelum cek apakah data sudah ada
         
-        // Fungsi untuk menyembunyikan overlay loading
+        // Timestamps untuk tracking
+        let loadingStartTime = Date.now();
+        let dataLoadedTime = null;
+        
+        // Flag untuk tracking status
+        let isDataLoaded = false;
+        let isRenderingComplete = false;
+        let isLoadingRemoved = false;
+        
+        // Fungsi untuk menyembunyikan overlay loading dengan transisi halus
         function hideLoadingOverlay() {
+            if (isLoadingRemoved) return; // Jangan proses jika sudah di-remove
+            
+            const loadingOverlay = document.getElementById('loading-overlay');
             if (!loadingOverlay) return;
             
-            // Tampilkan step terakhir
-            updateLoadingStatus(4, "Analisis berhasil dimuat!");
+            // Catat bahwa loading sudah dihapus untuk mencegah multiple calls
+            isLoadingRemoved = true;
             
-            // Tunggu sebentar lalu fade out
+            console.log("Menghilangkan loading overlay...");
+            
+            // Update loading status
+            const loadingStatus = document.getElementById('loading-status');
+            if (loadingStatus) {
+                loadingStatus.textContent = "Analisis berhasil dimuat!";
+            }
+            
+            // Tambahkan delay keseluruhan (fade out)
+            loadingOverlay.style.transition = 'opacity 1s ease';
+            loadingOverlay.style.opacity = '0';
+            
+            // Hapus dari DOM setelah transisi selesai
             setTimeout(() => {
-                loadingOverlay.classList.add('fade-out');
-                setTimeout(() => {
-                    loadingOverlay.style.display = 'none';
-                }, 500);
-            }, 500);
+                loadingOverlay.style.display = 'none';
+                console.log("Loading overlay berhasil dihilangkan");
+            }, 1000);
         }
-
-        // Fungsi untuk fetch data analisis
-        function fetchAnalysisData() {
-            updateLoadingStatus(3, "Memuat hasil analisis sentimen...");
+        
+        // Fungsi untuk mengecek apakah semua data telah dirender dan ditampilkan
+        function checkDataRendered() {
+            // Cek apakah minimal 3 detik telah berlalu sejak mulai cek data
+            const currentTime = Date.now();
+            const timeElapsedSinceDataLoaded = dataLoadedTime ? (currentTime - dataLoadedTime) : 0;
             
-            fetch('/api/analysis-data')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Gagal mengambil data analisis');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log("Data analisis berhasil dimuat");
-                    
-                    // Tunggu sedikit lebih lama sebelum menghilangkan loading
-                    // untuk memastikan semua aset lain juga dimuat
-                    setTimeout(() => {
-                        // Store global analysis results
+            if (!dataLoadedTime || timeElapsedSinceDataLoaded < MIN_RENDER_DELAY) {
+                // Belum 3 detik, cek lagi nanti
+                setTimeout(checkDataRendered, DATA_CHECK_INTERVAL);
+                return;
+            }
+            
+            // Daftar elemen yang harus dicek
+            const elementsToCheck = [
+                { id: 'total-tweets', condition: el => el.textContent && el.textContent !== '0' },
+                { id: 'positive-count', condition: el => el.textContent && el.textContent !== '0' },
+                { id: 'neutral-count', condition: el => el.textContent !== undefined },
+                { id: 'negative-count', condition: el => el.textContent !== undefined },
+                { id: 'top-hashtags', condition: el => el.children && el.children.length > 0 },
+                { id: 'main-topics', condition: el => el.children && el.children.length > 0 }
+            ];
+            
+            // Periksa semua elemen
+            let allElementsLoaded = true;
+            let notLoadedElements = [];
+            
+            elementsToCheck.forEach(item => {
+                const element = document.getElementById(item.id);
+                if (!element || !item.condition(element)) {
+                    allElementsLoaded = false;
+                    notLoadedElements.push(item.id);
+                }
+            });
+            
+            // Cek juga apakah minimal waktu loading sudah terpenuhi
+            const timeElapsedSinceStart = currentTime - loadingStartTime;
+            const minLoadingTimeMet = timeElapsedSinceStart >= MIN_LOADING_TIME;
+            const maxLoadingTimeExceeded = timeElapsedSinceStart >= MAX_LOADING_TIME;
+            
+            console.log(`Cek data - Semua elemen terload: ${allElementsLoaded}, Waktu minimal terpenuhi: ${minLoadingTimeMet}, Waktu: ${timeElapsedSinceStart}ms`);
+            if (notLoadedElements.length > 0) {
+                console.log(`Elemen yang belum terload: ${notLoadedElements.join(", ")}`);
+            }
+            
+            // Jika semua kondisi terpenuhi ATAU waktu maksimum sudah terlampaui, hilangkan loading
+            if ((allElementsLoaded && minLoadingTimeMet) || maxLoadingTimeExceeded) {
+                isRenderingComplete = true;
+                console.log(`Loading selesai - Alasan: ${maxLoadingTimeExceeded ? 'Waktu maksimum terlampaui' : 'Semua data terload dan waktu minimal terpenuhi'}`);
+                hideLoadingOverlay();
+            } else {
+                // Cek lagi nanti
+                setTimeout(checkDataRendered, DATA_CHECK_INTERVAL);
+            }
+        }
+        
+        // Fungsi untuk menunjukkan loading overlay dengan progres yang jelas
+        function showLoadingOverlay(message) {
+            const loadingOverlay = document.getElementById('loading-overlay');
+            if (!loadingOverlay) return;
+            
+            // Reset opacity jika sebelumnya sudah fade-out
+            loadingOverlay.style.opacity = '1';
+            loadingOverlay.style.display = 'flex';
+            
+            // Update pesan jika ada
+            if (message) {
+                const loadingMessage = loadingOverlay.querySelector('.loading-message');
+                if (loadingMessage) {
+                    loadingMessage.textContent = message;
+                }
+            }
+        }
+        
+        // Fungsi untuk memulai sequence loading dengan tahapan yang jelas
+        function startLoadingSequence() {
+            // Reset flags
+            isDataLoaded = false;
+            isRenderingComplete = false;
+            isLoadingRemoved = false;
+            
+            // Reset timestamps
+            loadingStartTime = Date.now();
+            dataLoadedTime = null;
+            
+            // Tampilkan loading overlay
+            showLoadingOverlay("Memuat data analisis sentimen...");
+            
+            // Update loading progress
+            updateLoadingProgress(1, "Menginisialisasi komponen...");
+            
+            // Tunggu sedikit untuk transisi visual
+            setTimeout(() => {
+                updateLoadingProgress(2, "Mengunduh data analisis...");
+                
+                // Mulai proses fetch data
+                fetch('/api/analysis-data')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`Gagal memuat data: ${response.status} ${response.statusText}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Tandai bahwa data sudah terload
+                        isDataLoaded = true;
+                        dataLoadedTime = Date.now();
+                        
+                        // Update progress loading
+                        updateLoadingProgress(3, "Memproses dan menampilkan data...");
+                        
+                        // Simpan data dalam variable global
                         window.analysisResults = data;
                         window.allTweets = data.tweets || [];
                         
-                        // Update UI with analysis results
-                        updateAnalysisResults(data);
+                        // Log info
+                        console.log("Data berhasil diunduh, mulai proses rendering...");
                         
-                        // Initialize pagination
-                        initializePagination();
+                        // Update UI dengan data
+                        updateUIWithData(data);
                         
-                        // Generate topics automatically
-                        generateTopics(data);
+                        // Mulai cek apakah data sudah dirender dengan benar
+                        setTimeout(checkDataRendered, DATA_CHECK_INTERVAL);
+                    })
+                    .catch(error => {
+                        console.error("Error loading data:", error);
+                        updateLoadingProgress(1, `Error: ${error.message}`);
                         
-                        // Create word cloud
-                        createImprovedWordCloud(data);
-                        
-                        // Sembunyikan loading overlay
-                        hideLoadingOverlay();
-                    }, 500);
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    
-                    // Update pesan loading menjadi error
-                    updateLoadingStatus(1, "Gagal memuat data: " + error.message);
-                    
-                    // Tambahkan tombol retry
-                    const loadingContent = document.querySelector('.loading-content');
-                    if (loadingContent) {
-                        const retryButton = document.createElement('button');
-                        retryButton.className = 'btn btn-dark mt-3';
-                        retryButton.innerHTML = 'Coba Lagi';
-                        retryButton.onclick = () => {
-                            window.location.reload();
-                        };
-                        loadingContent.appendChild(retryButton);
-                    }
-                    
-                    showAlert('Gagal memuat data analisis: ' + error.message, 'danger');
-                });
+                        // Tambahkan tombol retry ke loading overlay
+                        const loadingContent = document.querySelector('.loading-content');
+                        if (loadingContent) {
+                            const retryButton = document.createElement('button');
+                            retryButton.className = 'btn btn-dark mt-3';
+                            retryButton.textContent = 'Coba Lagi';
+                            retryButton.onclick = () => window.location.reload();
+                            loadingContent.appendChild(retryButton);
+                        }
+                    });
+            }, 800);
         }
-
-        // Fungsi untuk show alert
-        function showAlert(message, type) {
-            const alertContainer = document.getElementById('alert-container');
-            if (!alertContainer) return;
+        
+        // Fungsi untuk update loading progress
+        function updateLoadingProgress(step, message) {
+            const progressBar = document.getElementById('loading-progress');
+            const statusText = document.getElementById('loading-status');
             
-            const alert = document.createElement('div');
-            alert.className = `alert alert-${type} alert-dismissible fade show animate-fade-in`;
-            alert.role = 'alert';
-            alert.innerHTML = `
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            `;
+            if (progressBar) {
+                progressBar.className = `loading-progress-bar progress-step-${step}`;
+            }
             
-            alertContainer.appendChild(alert);
+            if (statusText) {
+                // Animasi fade untuk update text
+                statusText.style.opacity = '0';
+                setTimeout(() => {
+                    statusText.textContent = message;
+                    statusText.style.opacity = '1';
+                }, 300);
+            }
             
-            // Auto remove after 5 seconds
-            setTimeout(() => {
-                alert.classList.remove('show');
-                setTimeout(() => alert.remove(), 300);
-            }, 5000);
+            console.log(`Loading progress [${step}/4]: ${message}`);
         }
+        
+        // Fungsi untuk memperbarui UI dengan data yang diterima
+        function updateUIWithData(data) {
+            try {
+                // 1. Update judul
+                const titleElement = document.getElementById('title-placeholder');
+                if (titleElement) {
+                    titleElement.textContent = data.title || "Analisis Sentimen";
+                }
+                
+                // 2. Update statistik
+                updateElement('total-tweets', data.total_tweets || "0");
+                updateElement('positive-count', data.positive_count || "0");
+                updateElement('neutral-count', data.neutral_count || "0");
+                updateElement('negative-count', data.negative_count || "0");
+                updateElement('positive-percent', (data.positive_percent || "0") + "%");
+                updateElement('neutral-percent', (data.neutral_percent || "0") + "%");
+                updateElement('negative-percent', (data.negative_percent || "0") + "%");
+                
+                // 3. Update progress bar
+                const positiveSegment = document.getElementById('positive-segment');
+                const neutralSegment = document.getElementById('neutral-segment');
+                const negativeSegment = document.getElementById('negative-segment');
+                
+                if (positiveSegment) positiveSegment.style.width = (data.positive_percent || "0") + "%";
+                if (neutralSegment) neutralSegment.style.width = (data.neutral_percent || "0") + "%";
+                if (negativeSegment) negativeSegment.style.width = (data.negative_percent || "0") + "%";
+                
+                // 4. Inisialisasi semua fungsi update yang dibutuhkan untuk memuat data
+                if (typeof updateTopHashtags === 'function') updateTopHashtags(data.top_hashtags || []);
+                if (typeof updateTopUsers === 'function') updateTopUsers(data.top_users || []);
+                if (typeof updateMainTopics === 'function') updateMainTopics(data.topics || []);
+                if (typeof updateTopikUtama === 'function') updateTopikUtama(data.topics || []);
+                if (typeof updateHashtagSentiment === 'function') updateHashtagSentiment(data.hashtag_sentiment || []);
+                if (typeof updateSentimentPlot === 'function') updateSentimentPlot(data.sentiment_plot);
+                if (typeof initializePagination === 'function') initializePagination();
+                if (typeof generateTopics === 'function') generateTopics(data);
+                if (typeof createImprovedWordCloud === 'function') createImprovedWordCloud(data);
+                if (typeof initializeChatbot === 'function') initializeChatbot(data);
+                
+                // 5. Load chart-chart jika fungsinya ada
+                if (typeof createSentimentByHashtagChart === 'function') 
+                    createSentimentByHashtagChart(data.hashtag_sentiment || []);
+                
+                if (typeof createSentimentByLocationChart === 'function') 
+                    createSentimentByLocationChart(data.tweets || []);
+                
+                if (typeof createSentimentByLanguageChart === 'function') 
+                    createSentimentByLanguageChart(data.tweets || []);
+                
+                if (typeof createWordFrequencyChart === 'function' && data.sentiment_words) {
+                    createWordFrequencyChart('positive-words-chart', data.sentiment_words.positive || [], 
+                        'Kata Umum dalam Sentimen Positif', '#ffffff');
+                    createWordFrequencyChart('neutral-words-chart', data.sentiment_words.neutral || [], 
+                        'Kata Umum dalam Sentimen Netral', '#9e9e9e');
+                    createWordFrequencyChart('negative-words-chart', data.sentiment_words.negative || [], 
+                        'Kata Umum dalam Sentimen Negatif', '#000000');
+                }
+                
+                console.log("Semua fungsi update UI dipanggil");
+            } catch (error) {
+                console.error("Error saat update UI:", error);
+            }
+        }
+        
+        // Helper function untuk update elemen dengan ID tertentu
+        function updateElement(id, value) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value;
+            }
+        }
+        
+        // PENTING: Mulai proses loading
+        startLoadingSequence();
     });
 </script>
 {% endblock %}
