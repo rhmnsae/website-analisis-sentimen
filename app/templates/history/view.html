@@ -1956,28 +1956,77 @@
             }
         }
         
+        // Tambahkan topik default jika tidak ada topik yang ditemukan
+        if (topics.size === 0) {
+            topics.add("kebijakan publik");
+            topics.add("sentimen masyarakat");
+            topics.add("respon pemerintah");
+            topics.add("komunikasi publik");
+        }
+        
+        const topicIcons = {
+            'default': ''
+        };
+        
         Array.from(topics).forEach(topic => {
             const button = document.createElement('button');
             button.className = 'topic-button animate-fade-in';
             button.setAttribute('data-topic', topic);
-            button.textContent = topic;
             
+            // Select icon based on topic or use default
+            const iconHtml = topicIcons[topic] || topicIcons['default'];
+            
+            button.innerHTML = `${iconHtml} ${topic}`;
             button.addEventListener('click', function() {
                 const chatbotInput = document.getElementById('chatbot-input');
                 if (chatbotInput) {
                     chatbotInput.value = `Berikan evaluasi kebijakan terkait ${topic}`;
-                    sendChatbotMessage();
+                    // Panggil fungsi sendChatbotMessage dengan berbagai cara
+                    if (typeof sendChatbotMessage === 'function') {
+                        sendChatbotMessage();
+                    } else if (window.sendChatbotMessage) {
+                        window.sendChatbotMessage();
+                    } else {
+                        const chatbotSend = document.getElementById('chatbot-send');
+                        if (chatbotSend) chatbotSend.click();
+                    }
                 }
             });
             
             chatbotTopicButtons.appendChild(button);
         });
         
-        // Add a message to indicate these are suggested topics
+        // Tambahkan pesan di bawah topik-topik
         const messageDiv = document.createElement('div');
         messageDiv.className = 'text-center w-100 mt-2 mb-2 animate-fade-in';
         messageDiv.innerHTML = '<small class="text-muted">Topik diatas dibuat otomatis dari data yang dianalisa</small>';
         chatbotTopicButtons.appendChild(messageDiv);
+    }
+
+    function addTopicGenerationToUIUpdate() {
+        const isViewPage = window.location.pathname.includes('/history/') && 
+                        !window.location.pathname.includes('/index') &&
+                        !window.location.pathname.includes('/delete');
+        
+        if (isViewPage) {
+            // Tunggu sampai data selesai dimuat
+            const waitForData = setInterval(() => {
+                const dataScript = document.getElementById('analysis-data');
+                if (dataScript) {
+                    clearInterval(waitForData);
+                    try {
+                        const analysisData = JSON.parse(dataScript.textContent);
+                        if (analysisData) {
+                            // Generate topik-topik dari data
+                            generateTopicButtons(analysisData);
+                            console.log("Topic buttons generated successfully");
+                        }
+                    } catch (error) {
+                        console.error("Error generating topic buttons:", error);
+                    }
+                }
+            }, 300); // Periksa setiap 300ms
+        }
     }
 
     // Function to send message to chatbot
@@ -2196,6 +2245,53 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Set up tab switching behavior to ensure data is loaded properly
         const resultTabs = document.querySelectorAll('#result-tabs button');
+
+        const chatbotInput = document.getElementById('chatbot-input');
+        const chatbotSend = document.getElementById('chatbot-send');
+        const chatbotTopicButtons = document.getElementById('chatbot-topic-buttons');
+        
+        if (chatbotTopicButtons && (!chatbotTopicButtons.hasChildNodes() || chatbotTopicButtons.children.length === 0)) {
+            // Coba ambil data dari analysis-data script
+            const dataScript = document.getElementById('analysis-data');
+            if (dataScript) {
+                try {
+                    const analysisData = JSON.parse(dataScript.textContent);
+                    generateTopicButtons(analysisData);
+                    console.log("Topic buttons generated from script data");
+                } catch (error) {
+                    console.error("Error parsing analysis data:", error);
+                    
+                    // Fallback: generate default topics if no data
+                    const defaultData = {
+                        title: "Analisis Sentimen",
+                        top_hashtags: [],
+                        topics: []
+                    };
+                    generateTopicButtons(defaultData);
+                    console.log("Generated default topic buttons as fallback");
+                }
+            } else if (typeof analysisResults !== 'undefined' && analysisResults) {
+                // Gunakan data dari variabel global jika ada
+                generateTopicButtons(analysisResults);
+                console.log("Topic buttons generated from global variable");
+            } else {
+                // Fallback jika tidak ada data
+                const defaultData = {
+                    title: "Analisis Sentimen",
+                    top_hashtags: [],
+                    topics: []
+                };
+                generateTopicButtons(defaultData);
+                console.log("Generated default topic buttons as fallback");
+            }
+        }
+        
+        // Tambahkan juga fungsi generateTopicButtons ke window
+        // agar bisa dipanggil dari mana saja
+        window.generateTopicButtons = generateTopicButtons;
+        
+        // Panggil addTopicGenerationToUIUpdate
+        addTopicGenerationToUIUpdate();
         
         resultTabs.forEach(tab => {
             tab.addEventListener('click', function() {

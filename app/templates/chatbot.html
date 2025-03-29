@@ -85,16 +85,174 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Hook up example questions
-    const exampleQuestions = document.querySelectorAll('.example-question');
+    // Ambil elemen chatbot input dan tombol kirim
     const chatbotInput = document.getElementById('chatbot-input');
     const chatbotSend = document.getElementById('chatbot-send');
     
-    exampleQuestions.forEach(question => {
-        question.addEventListener('click', function() {
-            chatbotInput.value = this.textContent.trim();
-            chatbotSend.click();
+    if (chatbotInput && chatbotSend) {
+        // Fungsi untuk mengirim pesan saat tombol diklik
+        chatbotSend.addEventListener('click', function() {
+            // Pastikan fungsi sendChatbotMessage ada
+            if (typeof sendChatbotMessage === 'function') {
+                sendChatbotMessage();
+            } else {
+                console.error("Function sendChatbotMessage is not defined");
+                // Definisikan sendChatbotMessage sebagai fallback jika tidak ada
+                window.sendChatbotMessage = function() {
+                    const chatbotMessages = document.getElementById('chatbot-messages');
+                    const messageText = chatbotInput.value.trim();
+                    
+                    if (!messageText) return;
+                    
+                    // Add user message to chat
+                    const userMessage = document.createElement('div');
+                    userMessage.className = 'message message-user animate-fade-in';
+                    userMessage.textContent = messageText;
+                    chatbotMessages.appendChild(userMessage);
+                    
+                    // Clear input
+                    chatbotInput.value = '';
+                    
+                    // Add loading indicator
+                    const loadingMessage = document.createElement('div');
+                    loadingMessage.className = 'message message-bot animate-fade-in';
+                    loadingMessage.innerHTML = '<div class="d-flex align-items-center"><div class="spinner-grow spinner-grow-sm me-2" role="status"></div><span>Menganalisis data dan menyusun respons...</span></div>';
+                    chatbotMessages.appendChild(loadingMessage);
+                    
+                    // Scroll to bottom
+                    chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+                    
+                    // Send to server
+                    fetch('/chatbot', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({message: messageText})
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Remove loading message
+                        chatbotMessages.removeChild(loadingMessage);
+                        
+                        // Format the response text with proper line breaks and formatting
+                        let formattedResponse = data.response;
+                        
+                        // Convert line breaks to <br>
+                        formattedResponse = formattedResponse.replace(/\n/g, '<br>');
+                        
+                        // Format numbered lists (1. Item)
+                        formattedResponse = formattedResponse.replace(/(\d+\.\s+[^\n<]+)(<br>|$)/g, '<li>$1</li>');
+                        
+                        // Format bullet points (- Item or • Item)
+                        formattedResponse = formattedResponse.replace(/([-•]\s+[^\n<]+)(<br>|$)/g, '<li>$1</li>');
+                        
+                        // Wrap lists in <ul> tags
+                        formattedResponse = formattedResponse.replace(/<li>([^<]+)<\/li>(<li>)/g, '<li>$1</li>$2');
+                        formattedResponse = formattedResponse.replace(/<li>([^<]+)<\/li>(?!<li>)/g, '<ul><li>$1</li></ul>');
+                        formattedResponse = formattedResponse.replace(/<\/ul><ul>/g, '');
+                        
+                        // Bold text between asterisks (*text*)
+                        formattedResponse = formattedResponse.replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
+                        
+                        // Italic text between underscores (_text_)
+                        formattedResponse = formattedResponse.replace(/_([^_]+)_/g, '<em>$1</em>');
+                        
+                        // Create paragraphs for text blocks
+                        formattedResponse = '<p>' + formattedResponse.replace(/<br><br>/g, '</p><p>') + '</p>';
+                        
+                        // Clean up empty paragraphs
+                        formattedResponse = formattedResponse.replace(/<p><\/p>/g, '');
+                        
+                        // Add bot response with animation
+                        const botMessage = document.createElement('div');
+                        botMessage.className = 'message message-bot animate-fade-in';
+                        botMessage.innerHTML = formattedResponse;
+                        chatbotMessages.appendChild(botMessage);
+                        
+                        // Scroll to bottom
+                        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+                    })
+                    .catch(error => {
+                        // Remove loading message
+                        chatbotMessages.removeChild(loadingMessage);
+                        
+                        // Add error message
+                        const errorMessage = document.createElement('div');
+                        errorMessage.className = 'message message-bot animate-fade-in';
+                        errorMessage.textContent = 'Maaf, terjadi kesalahan dalam berkomunikasi dengan chatbot. Silakan coba lagi.';
+                        chatbotMessages.appendChild(errorMessage);
+                        
+                        // Scroll to bottom
+                        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+                    });
+                };
+                
+                // Panggil fungsi yang baru didefinisikan
+                window.sendChatbotMessage();
+            }
         });
-    });
+        
+        // Menambahkan penanganan untuk tombol Enter di input field
+        chatbotInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                
+                if (typeof sendChatbotMessage === 'function') {
+                    sendChatbotMessage();
+                } else if (window.sendChatbotMessage) {
+                    window.sendChatbotMessage();
+                } else {
+                    chatbotSend.click(); // Simulasi klik tombol kirim
+                }
+            }
+        });
+    }
+    
+    // Hook up example questions
+    const exampleQuestions = document.querySelectorAll('.example-question');
+    if (exampleQuestions.length > 0 && chatbotInput) {
+        exampleQuestions.forEach(question => {
+            question.addEventListener('click', function() {
+                chatbotInput.value = this.textContent.trim();
+                if (chatbotSend) {
+                    chatbotSend.click();
+                }
+            });
+        });
+    }
+    
+    // Generate topic buttons if needed
+    const chatbotTopicButtons = document.getElementById('chatbot-topic-buttons');
+    if (chatbotTopicButtons && (!chatbotTopicButtons.children || chatbotTopicButtons.children.length === 0)) {
+        if (typeof generateTopicButtons === 'function') {
+            // Coba ambil data dari analysis-data script
+            const dataScript = document.getElementById('analysis-data');
+            if (dataScript) {
+                try {
+                    const analysisData = JSON.parse(dataScript.textContent);
+                    generateTopicButtons(analysisData);
+                } catch (error) {
+                    console.error("Error parsing analysis data:", error);
+                    // Fallback ke data default
+                    generateTopicButtons({
+                        title: "Analisis Sentimen",
+                        top_hashtags: [],
+                        topics: []
+                    });
+                }
+            } else if (typeof analysisResults !== 'undefined' && analysisResults) {
+                // Gunakan data dari variabel global
+                generateTopicButtons(analysisResults);
+            } else {
+                // Fallback ke data default
+                generateTopicButtons({
+                    title: "Analisis Sentimen",
+                    top_hashtags: [],
+                    topics: []
+                });
+            }
+        }
+    }
 });
 </script>
