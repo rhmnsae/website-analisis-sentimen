@@ -1,6 +1,6 @@
 import os
 import nltk
-from flask import Flask
+from flask import Flask, jsonify
 from flask_session import Session
 from flask_login import LoginManager
 from .models.database import db, User
@@ -66,5 +66,21 @@ def create_app(config_file=None):
     # Buat database jika belum ada
     with app.app_context():
         db.create_all()
+        
+    # Tambahkan kode ini ke dalam fungsi create_app() di app/__init__.py
+
+    # Tambahkan error handler untuk Lock Error (429)
+    @app.errorhandler(429)
+    def handle_lock_error(e):
+        # Jika objek response tersedia di exception, gunakan itu
+        if hasattr(e, 'description') and isinstance(e.description, dict):
+            return jsonify(e.description), 429
+        
+        # Jika response adalah objek Response, kembalikan
+        if hasattr(e, 'get_response'):
+            return e.get_response()
+            
+        # Fallback standar
+        return jsonify({'error': 'Terlalu banyak request atau proses masih berjalan. Harap tunggu.', 'code': 'TOO_MANY_REQUESTS'}), 429
     
     return app

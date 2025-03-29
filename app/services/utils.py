@@ -1,5 +1,3 @@
-# File: app/services/utils.py
-# Versi kompatibel Windows dengan perbaikan error 429
 
 import os
 import time
@@ -8,6 +6,8 @@ import datetime
 import logging
 from functools import wraps
 import random
+import shutil
+from flask import abort, jsonify, request, current_app, g
 
 # Dictionary untuk menyimpan status lock per user
 _user_locks = {}
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 class UserLock:
     """
-    Implementasi lock berbasis memory untuk mencegah proses duplikasi
+    Implementasi lock berbasis file untuk mencegah proses duplikasi
     """
     def __init__(self, user_id):
         self.user_id = user_id
@@ -73,6 +73,35 @@ class UserLock:
                 logger.warning(f"Tidak ada lock file untuk dilepaskan untuk user {self.user_id}")
         except Exception as e:
             logger.error(f"Error saat release lock: {e}")
+    
+    def force_cleanup(self):
+        """Paksa membersihkan lock apapun yang mungkin tersisa"""
+        try:
+            if os.path.exists(self.lock_file):
+                os.remove(self.lock_file)
+                logger.info(f"Lock untuk user {self.user_id} dibersihkan secara paksa")
+            return True
+        except Exception as e:
+            logger.error(f"Gagal membersihkan lock secara paksa: {e}")
+            return False
+
+def cleanup_all_locks():
+    """Fungsi untuk membersihkan semua lock yang ada"""
+    try:
+        lock_dir = os.path.join(os.getcwd(), 'locks')
+        if os.path.exists(lock_dir):
+            # Hapus folder locks dan buat ulang
+            shutil.rmtree(lock_dir)
+            os.makedirs(lock_dir, exist_ok=True)
+            logger.info("Semua lock berhasil dibersihkan")
+            
+            # Reset user_locks dictionary
+            with _global_lock:
+                _user_locks.clear()
+        return True
+    except Exception as e:
+        logger.error(f"Gagal membersihkan semua lock: {e}")
+        return False
 
 def acquire_user_lock(user_id, timeout=30):
     """
@@ -136,33 +165,61 @@ def release_user_lock(user_id):
             del _user_locks[user_id]
             logger.info(f"Lock untuk user {user_id} berhasil dilepaskan")
         else:
-            logger.warning(f"Tidak ada lock untuk dilepaskan untuk user {user_id}")
+            # Coba bersihkan file lock jika ada, meskipun tidak ada entry di dictionary
+            lock_obj = UserLock(user_id)
+            lock_obj.force_cleanup()
+            logger.warning(f"Tidak ada lock di memory untuk user {user_id}, mencoba bersihkan file lock")
 
-def user_lock_required(f):
-    """
-    Decorator untuk memastikan suatu fungsi hanya bisa dijalankan 
-    oleh user yang sama sekali dalam satu waktu
-    """
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        from flask import current_app, request, jsonify
+def check_force_cleanup_parameter(user_id):
+    """Fungsi untuk mengecek parameter force_cleanup di URL"""
+    try:
+        # Jika ada parameter force_cleanup, bersihkan lock sebelum mencoba
+        force_cleanup = request.args.get('force_cleanup', 'false').lower() == 'true'
+        if force_cleanup:
+            lock_obj = UserLock(user_id)
+            lock_obj.force_cleanup()
+            logger.info(f"Lock untuk user {user_id} dibersihkan secara paksa dari URL parameter")
+            return True
+        return False
+    except:
+        return False
+
+# Decorator berbasis class untuk lebih banyak kontrol
+class UserLockRequired:
+    """Decorator berbasis class yang lebih kuat untuk mengontrol lock per user"""
+    
+    def __init__(self, f):
+        self.f = f
+        wraps(f)(self)
+    
+    def __call__(self, *args, **kwargs):
         from flask_login import current_user
         
         if not current_user.is_authenticated:
-            return jsonify({'error': 'User tidak terautentikasi'}), 401
+            abort(401, description="User tidak terautentikasi")
         
         user_id = current_user.id
         
+        # Bersihkan lock jika diminta
+        check_force_cleanup_parameter(user_id)
+        
         # Coba dapatkan lock
         if not acquire_user_lock(user_id):
-            current_app.logger.warning(f"User {user_id} mencoba menjalankan fungsi yang sudah berjalan")
-            return jsonify({
-                'error': 'Proses sebelumnya masih berjalan. Harap tunggu beberapa saat atau refresh halaman.'
-            }), 429
+            # Simpan informasi error ke variabel global untuk diakses di tempat lain
+            g.lock_error = True
+            g.lock_user_id = user_id
+            
+            # Gunakan Flask abort untuk benar-benar menghentikan eksekusi function
+            response = jsonify({
+                'error': 'Proses sebelumnya masih berjalan. Harap tunggu beberapa saat atau refresh halaman.',
+                'code': 'LOCK_EXISTS'
+            })
+            response.status_code = 429
+            abort(response)
         
         try:
             # Jalankan fungsi yang dibungkus
-            return f(*args, **kwargs)
+            return self.f(*args, **kwargs)
         except Exception as e:
             current_app.logger.error(f"Error saat menjalankan fungsi: {e}")
             raise
@@ -170,5 +227,7 @@ def user_lock_required(f):
             # Pastikan lock selalu dilepaskan setelah selesai
             release_user_lock(user_id)
             current_app.logger.info(f"Lock untuk user {user_id} dilepaskan setelah fungsi selesai")
-    
-    return decorated_function
+
+# Backward compatibility dengan decorator style lama
+def user_lock_required(f):
+    return UserLockRequired(f)

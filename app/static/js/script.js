@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Kembalikan tampilan semula setelah beberapa saat
                 setTimeout(() => {
                     this.innerHTML = `
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="7 10 12 15 17 10"></polyline>
                             <line x1="12" y1="15" x2="12" y2="3"></line>
@@ -2050,13 +2050,105 @@ document.addEventListener('DOMContentLoaded', function() {
         
         return formatted;
     }
+
+    function forceCleanupLock() {
+        fetch('/clean-lock')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showAlert(data.message, 'success');
+                
+                // Tambahkan countdown sebelum re-enable tombol
+                const waitTime = 3;
+                let countdown = waitTime;
+                
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Melanjutkan dalam ${countdown}...`;
+                
+                const countdownInterval = setInterval(() => {
+                    countdown--;
+                    if (countdown <= 0) {
+                        clearInterval(countdownInterval);
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Mulai Analisis`;
+                        isSubmitting = false;
+                        retryCount = 0;
+                    } else {
+                        submitBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Melanjutkan dalam ${countdown}...`;
+                    }
+                }, 1000);
+                
+            } else {
+                showAlert('Gagal membersihkan lock: ' + data.message, 'warning');
+            }
+        })
+        .catch(error => {
+            console.error('Error cleaning lock:', error);
+            showAlert('Error: ' + error.message, 'danger');
+        });
+    }
+    
+    // Modifikasi fungsi submitFormWithRetry untuk menampilkan tombol clean lock
+    // Cari bagian kode yang menangani response 429 dan update menjadi seperti berikut:
+    
+    if (response.status === 429) {
+        // Too Many Requests - implementasi retry dengan backoff
+        return response.json().then(errorData => {
+            retryCount++;
+            
+            // Jika ada kode LOCK_EXISTS, tawarkan untuk membersihkan lock
+            if (errorData.code === 'LOCK_EXISTS') {
+                console.log("Lock error terdeteksi");
+                
+                // Tampilkan pesan dengan opsi clean lock
+                const message = `
+                    <div>Proses sebelumnya masih berjalan. 
+                    <button onclick="forceCleanupLock()" class="btn btn-sm btn-outline-warning ms-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="9" y1="9" x2="15" y2="15"></line>
+                            <line x1="15" y1="9" x2="9" y2="15"></line>
+                        </svg>
+                        Bersihkan Lock
+                    </button></div>
+                `;
+                showAlert(message, 'warning', false); // Parameter false agar tidak auto-hide
+                
+                // Reset submit button
+                resetSubmitButton();
+                return null;
+            }
+            
+            // Standar retry untuk error lain
+            let waitTime = retryTimeout * Math.pow(2, retryCount - 1); // Exponential backoff
+            
+            if (retryCount <= maxRetries) {
+                showAlert(`Server sedang sibuk. Mencoba lagi dalam ${Math.round(waitTime/1000)} detik... (Percobaan ${retryCount}/${maxRetries})`, 'warning');
+                
+                // Update tombol
+                submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Menunggu (${Math.round(waitTime/1000)}s)...`;
+                
+                setTimeout(() => {
+                    // Coba lagi setelah backoff
+                    submitFormWithRetry();
+                }, waitTime);
+                
+                return null; // Skip processing response
+            } else {
+                // Gagal setelah beberapa kali retry
+                throw new Error('Server sedang sibuk. Silakan coba lagi nanti.');
+            }
+        });
+    }
     
     // Function to show alert
-    function showAlert(message, type) {
+    function showAlert(message, type, autoHide = true) {
         const alertContainer = document.getElementById('alert-container');
         if (!alertContainer) return;
         
+        const alertId = 'alert-' + Date.now();
         const alert = document.createElement('div');
+        alert.id = alertId;
         alert.className = `alert alert-${type} alert-dismissible fade show animate-fade-in`;
         alert.role = 'alert';
         alert.innerHTML = `
@@ -2066,11 +2158,18 @@ document.addEventListener('DOMContentLoaded', function() {
         
         alertContainer.appendChild(alert);
         
-        // Auto remove after 5 seconds
-        setTimeout(() => {
-            alert.classList.remove('show');
-            setTimeout(() => alert.remove(), 300);
-        }, 5000);
+        // Auto remove after 5 seconds if autoHide is true
+        if (autoHide) {
+            setTimeout(() => {
+                const existingAlert = document.getElementById(alertId);
+                if (existingAlert) {
+                    existingAlert.classList.remove('show');
+                    setTimeout(() => existingAlert.remove(), 300);
+                }
+            }, 5000);
+        }
+        
+        return alertId;
     }
 
     function submitFormWithRetry() {
@@ -2101,11 +2200,17 @@ document.addEventListener('DOMContentLoaded', function() {
         // Log information
         console.log('Memulai analisis file...');
         
+        // Tambahkan parameter force_cleanup untuk mengatasi lock error jika ini retry
+        let uploadUrl = '/upload';
+        if (retryCount > 0) {
+            uploadUrl += '?force_cleanup=true';
+        }
+        
         // Send to server with explicit timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 menit timeout
+        const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 menit timeout (ditambah)
         
-        fetch('/upload', {
+        fetch(uploadUrl, {
             method: 'POST',
             body: formData,
             signal: controller.signal
@@ -2115,25 +2220,35 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (response.status === 429) {
                 // Too Many Requests - implementasi retry dengan backoff
-                retryCount++;
-                if (retryCount <= maxRetries) {
-                    const waitTime = retryTimeout * Math.pow(2, retryCount - 1); // Exponential backoff
+                return response.json().then(errorData => {
+                    retryCount++;
                     
-                    showAlert(`Server sedang sibuk. Mencoba lagi dalam ${waitTime/1000} detik... (Percobaan ${retryCount}/${maxRetries})`, 'warning');
+                    // Khusus untuk lock error, tunda lebih lama
+                    let waitTime = retryTimeout * Math.pow(2, retryCount - 1); // Exponential backoff
                     
-                    // Update tombol
-                    submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Menunggu server (${waitTime/1000}s)...`;
+                    // Jika ada kode LOCK_EXISTS, beri retryTimeout lebih lama
+                    if (errorData.code === 'LOCK_EXISTS') {
+                        console.log("Lock error terdeteksi, menunggu lebih lama");
+                        waitTime = Math.max(waitTime, 8000); // Minimal 8 detik untuk lock error
+                    }
                     
-                    setTimeout(() => {
-                        // Coba lagi setelah backoff
-                        submitFormWithRetry();
-                    }, waitTime);
-                    
-                    return null; // Skip processing response
-                } else {
-                    // Gagal setelah beberapa kali retry
-                    throw new Error('Server sedang sibuk. Silakan coba lagi nanti.');
-                }
+                    if (retryCount <= maxRetries) {
+                        showAlert(`Server sedang sibuk. Mencoba lagi dalam ${Math.round(waitTime/1000)} detik... (Percobaan ${retryCount}/${maxRetries})`, 'warning');
+                        
+                        // Update tombol
+                        submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Menunggu proses sebelumnya (${Math.round(waitTime/1000)}s)...`;
+                        
+                        setTimeout(() => {
+                            // Coba lagi setelah backoff
+                            submitFormWithRetry();
+                        }, waitTime);
+                        
+                        return null; // Skip processing response
+                    } else {
+                        // Gagal setelah beberapa kali retry
+                        throw new Error('Server sedang sibuk. Silakan coba lagi nanti.');
+                    }
+                });
             }
             
             if (!response.ok) {
@@ -2145,8 +2260,9 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (!data) return; // Skip if null (during retry)
             
-            // Reset flag
+            // Reset flag dan counter
             isSubmitting = false;
+            retryCount = 0;
             
             // Hide loading indicator
             loadingIndicator.classList.add('d-none');
@@ -2178,6 +2294,24 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Reset submit button
             resetSubmitButton();
+        });
+    }
+    
+    // Tambahkan fungsi untuk membersihkan lock melalui UI jika diperlukan
+    function forceCleanupLock() {
+        fetch('/upload?force_cleanup=true', {
+            method: 'GET'
+        })
+        .then(response => {
+            if (response.ok) {
+                showAlert('Lock berhasil dibersihkan. Silakan coba lagi.', 'success');
+            } else {
+                showAlert('Gagal membersihkan lock.', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error cleaning lock:', error);
+            showAlert('Error: ' + error.message, 'danger');
         });
     }
     

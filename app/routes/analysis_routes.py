@@ -22,7 +22,6 @@ from reportlab.platypus.flowables import HRFlowable
 from reportlab.graphics.charts.barcharts import VerticalBarChart
 from app.services.utils import user_lock_required
 
-
 analysis_bp = Blueprint('analysis', __name__)
 
 def clean_for_json(value):
@@ -189,13 +188,8 @@ def get_analysis_data():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
-# Existing code continues...
-# Tambahkan import di app/routes/analysis_routes.py
-from app.services.utils import user_lock_required
 
-# Kemudian ganti route upload dengan:
-
-@analysis_bp.route('/upload', methods=['POST'])
+@analysis_bp.route('/upload', methods=['POST', 'GET'])
 @login_required
 @user_lock_required  # Tambahkan decorator untuk lock per user
 def upload_file():
@@ -203,8 +197,14 @@ def upload_file():
     Route untuk mengunggah dan menganalisis file CSV.
     Dengan lock untuk mencegah duplikasi proses.
     """
+    # Jika metode GET, ini mungkin untuk force cleanup lock
+    if request.method == 'GET':
+        # Respond with simple success
+        return jsonify({'status': 'success', 'message': 'Lock checked'})
+    
     # Logging untuk memulai proses
     current_app.logger.info(f"User {current_user.id} ({current_user.username}) memulai upload dan analisis file")
+
     
     try:
         # 1. Validasi awal dan persiapan
@@ -470,6 +470,38 @@ def upload_file():
         error_details = traceback.format_exc()
         current_app.logger.error(f"Error tak terduga: {e}\n{error_details}")
         return jsonify({'error': f'Error tak terduga: {str(e)}'})
+    
+    
+@analysis_bp.route('/clean-lock', methods=['GET'])
+@login_required
+def clean_lock():
+    """
+    Route untuk membersihkan lock pengguna yang mungkin macet
+    """
+    from app.services.utils import UserLock
+    
+    try:
+        # Buat lock object dan bersihkan
+        lock_obj = UserLock(current_user.id)
+        success = lock_obj.force_cleanup()
+        
+        if success:
+            return jsonify({
+                'status': 'success',
+                'message': 'Lock berhasil dibersihkan. Anda dapat mencoba analisis lagi sekarang.'
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': 'Gagal membersihkan lock, namun tidak ada lock aktif ditemukan.'
+            }), 400
+    except Exception as e:
+        current_app.logger.error(f"Error saat membersihkan lock: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Terjadi kesalahan: {str(e)}'
+        }), 500
+
 
 @analysis_bp.route('/filter_tweets', methods=['POST'])
 @login_required
