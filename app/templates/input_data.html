@@ -51,15 +51,16 @@
         </div>
     </div>
     
+    <!-- Di app/templates/input_data.html, perbarui bagian card -->
     <div class="row">
         <div class="col-md-6">
-            <div class="card mb-4">
+            <div class="card mb-4 h-100"> <!-- Tambahkan h-100 di sini -->
                 <div class="card-header">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                     <h5 class="card-title">Riwayat Analisis Terbaru</h5>
                 </div>
-                <div class="card-body">
-                    <div class="list-group">
+                <div class="card-body d-flex flex-column"> <!-- Tambahkan d-flex flex-column -->
+                    <div class="list-group flex-grow-1"> <!-- Tambahkan flex-grow-1 -->
                         {% if current_user.analyses %}
                             {% set recent_analyses = current_user.analyses|sort(attribute='created_at', reverse=True) %}
                             {% for analysis in recent_analyses %}
@@ -78,26 +79,33 @@
                                     </a>
                                 {% endif %}
                             {% endfor %}
-                            <div class="text-center mt-3">
-                                <a href="{{ url_for('history.index') }}" class="btn btn-sm btn-outline-dark">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                                    Lihat Semua Riwayat
-                                </a>
-                            </div>
                         {% else %}
-                            <div class="text-center py-4">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-3 text-muted"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                                <h6 class="text-muted">Belum ada riwayat analisis</h6>
-                                <p class="small">Mulai dengan menganalisis data X Anda</p>
-                            </div>
+                        <div class="d-flex flex-column justify-content-center align-items-center text-center py-4 flex-grow-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-3 text-muted">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                            </svg>
+                            <h6 class="text-muted">Belum ada riwayat analisis</h6>
+                            <p class="small">Mulai dengan menganalisis data X Anda</p>
+                        </div>
+                        
                         {% endif %}
                     </div>
+                    {% if current_user.analyses %}
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('history.index') }}" class="btn btn-sm btn-outline-dark">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            Lihat Semua Riwayat
+                        </a>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
         
         <div class="col-md-6">
-            <div class="card mb-4">
+            <div class="card mb-4 h-100"> <!-- Tambahkan h-100 di sini -->
                 <div class="card-header">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>
                     <h5 class="card-title">Petunjuk Penggunaan</h5>

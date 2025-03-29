@@ -2115,8 +2115,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Modifikasi fungsi submitFormWithRetry untuk menampilkan tombol clean lock
-    // Cari bagian kode yang menangani response 429 dan update menjadi seperti berikut:
     
     if (response.status === 429) {
         // Too Many Requests - implementasi retry dengan backoff
@@ -2146,24 +2144,40 @@ document.addEventListener('DOMContentLoaded', function() {
                 return null;
             }
             
-            // Standar retry untuk error lain
-            let waitTime = retryTimeout * Math.pow(2, retryCount - 1); // Exponential backoff
-            
-            if (retryCount <= maxRetries) {
-                showAlert(`Server sedang sibuk. Mencoba lagi dalam ${Math.round(waitTime/1000)} detik... (Percobaan ${retryCount}/${maxRetries})`, 'warning');
+            function handleLockError(errorData) {
+                retryCount++;
                 
-                // Update tombol
-                submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Menunggu (${Math.round(waitTime/1000)}s)...`;
+                // Jika ada kode LOCK_EXISTS, tawarkan untuk membersihkan lock
+                if (errorData.code === 'LOCK_EXISTS') {
+                    console.log("Lock error terdeteksi");
+                    
+                    // Tampilkan modal dengan opsi clean lock
+                    showCleanLockModal(errorData.user_id || current_user.id);
+                    
+                    // Reset submit button
+                    resetSubmitButton();
+                    return null;
+                }
                 
-                setTimeout(() => {
-                    // Coba lagi setelah backoff
-                    submitFormWithRetry();
-                }, waitTime);
+                // Standar retry untuk error lain
+                let waitTime = retryTimeout * Math.pow(2, retryCount - 1); // Exponential backoff
                 
-                return null; // Skip processing response
-            } else {
-                // Gagal setelah beberapa kali retry
-                throw new Error('Server sedang sibuk. Silakan coba lagi nanti.');
+                if (retryCount <= maxRetries) {
+                    showAlert(`Server sedang sibuk. Mencoba lagi dalam ${Math.round(waitTime/1000)} detik... (Percobaan ${retryCount}/${maxRetries})`, 'warning');
+                    
+                    // Update tombol
+                    submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Menunggu (${Math.round(waitTime/1000)}s)...`;
+                    
+                    setTimeout(() => {
+                        // Coba lagi setelah backoff
+                        submitFormWithRetry();
+                    }, waitTime);
+                    
+                    return null; // Skip processing response
+                } else {
+                    // Gagal setelah beberapa kali retry
+                    throw new Error('Server sedang sibuk. Silakan coba lagi nanti.');
+                }
             }
         });
     }
@@ -2521,21 +2535,40 @@ document.addEventListener('DOMContentLoaded', function() {
                         return null;
                     }
                     
-                    if (retryCount <= maxRetries) {
-                        showAlert(`Server sedang sibuk. Mencoba lagi dalam ${Math.round(waitTime/1000)} detik... (Percobaan ${retryCount}/${maxRetries})`, 'warning');
+                    function handleLockError(errorData) {
+                        retryCount++;
                         
-                        // Update tombol
-                        submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Menunggu proses sebelumnya (${Math.round(waitTime/1000)}s)...`;
+                        // Jika ada kode LOCK_EXISTS, tawarkan untuk membersihkan lock
+                        if (errorData.code === 'LOCK_EXISTS') {
+                            console.log("Lock error terdeteksi");
+                            
+                            // Tampilkan modal dengan opsi clean lock
+                            showCleanLockModal(errorData.user_id || current_user.id);
+                            
+                            // Reset submit button
+                            resetSubmitButton();
+                            return null;
+                        }
                         
-                        setTimeout(() => {
-                            // Coba lagi setelah backoff
-                            submitFormWithRetry();
-                        }, waitTime);
+                        // Standar retry untuk error lain
+                        let waitTime = retryTimeout * Math.pow(2, retryCount - 1); // Exponential backoff
                         
-                        return null; // Skip processing response
-                    } else {
-                        // Gagal setelah beberapa kali retry
-                        throw new Error('Server sedang sibuk. Silakan coba lagi nanti atau bersihkan lock.');
+                        if (retryCount <= maxRetries) {
+                            showAlert(`Server sedang sibuk. Mencoba lagi dalam ${Math.round(waitTime/1000)} detik... (Percobaan ${retryCount}/${maxRetries})`, 'warning');
+                            
+                            // Update tombol
+                            submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Menunggu (${Math.round(waitTime/1000)}s)...`;
+                            
+                            setTimeout(() => {
+                                // Coba lagi setelah backoff
+                                submitFormWithRetry();
+                            }, waitTime);
+                            
+                            return null; // Skip processing response
+                        } else {
+                            // Gagal setelah beberapa kali retry
+                            throw new Error('Server sedang sibuk. Silakan coba lagi nanti.');
+                        }
                     }
                 });
             }

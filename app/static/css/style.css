@@ -1412,3 +1412,235 @@ footer h5 svg {
 .progress-step-2 { width: 50% !important; }
 .progress-step-3 { width: 75% !important; }
 .progress-step-4 { width: 100% !important; }
+
+
+/* Tambahkan CSS ini ke app/static/css/style.css */
+
+/* Improved Loading Overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.95);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    backdrop-filter: blur(5px);
+    transition: all 0.5s ease;
+}
+
+.loading-overlay.fade-out {
+    opacity: 0;
+}
+
+.loading-content {
+    background-color: white;
+    border-radius: 10px;
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    max-width: 90%;
+    width: 400px;
+    animation: fadeInUp 0.5s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.loading-spinner {
+    margin-bottom: 1.5rem;
+    width: 60px;
+    height: 60px;
+}
+
+.loading-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: var(--primary-color);
+}
+
+.loading-message {
+    font-size: 0.95rem;
+    color: var(--dark-gray);
+    margin-bottom: 1.5rem;
+}
+
+.loading-progress-container {
+    height: 10px;
+    background-color: var(--light-gray);
+    border-radius: 5px;
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+}
+
+.loading-progress-bar {
+    height: 100%;
+    background-color: var(--primary-color);
+    border-radius: 5px;
+    width: 0%;
+    transition: width 0.5s ease;
+}
+
+.loading-step-text {
+    font-size: 0.85rem;
+    color: var(--medium-gray);
+    transition: all 0.3s ease;
+}
+
+.loading-progress-bar.progress-step-1 { width: 25%; }
+.loading-progress-bar.progress-step-2 { width: 50%; }
+.loading-progress-bar.progress-step-3 { width: 75%; }
+.loading-progress-bar.progress-step-4 { width: 100%; }
+
+/* Untuk loading dalam halaman hasil analisis */
+#loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.95);
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: var(--border-radius);
+}
+
+#loading-overlay .loading-content {
+    text-align: center;
+    animation: fadeInUp 0.5s ease;
+}
+
+#loading-progress {
+    transition: width 0.5s ease;
+}
+
+
+/* Tambahkan CSS ini ke app/static/css/style.css */
+
+/* Enhanced Modal Styling */
+.modal-content {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    background-color: white;
+}
+
+.modal-header {
+    padding: 1.5rem;
+    background-color: var(--primary-color);
+    color: white;
+    border-bottom: none;
+}
+
+.modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.modal-body {
+    padding: 2rem 1.5rem;
+    text-align: center;
+}
+
+.modal-footer {
+    padding: 1.25rem 1.5rem;
+    border-top: none;
+    background-color: #f8f8f8;
+}
+
+.modal-icon {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 1.5rem;
+}
+
+.modal-message {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+}
+
+.modal-submessage {
+    color: var(--medium-gray);
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+}
+
+.btn-close {
+    color: white;
+    opacity: 0.8;
+    box-shadow: none;
+}
+
+.btn-close:hover {
+    opacity: 1;
+}
+
+/* Memastikan modal tidak berada dalam card */
+body > .modal {
+    z-index: 1050;
+}
+
+.modal-backdrop {
+    z-index: 1040;
+    background-color: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(3px);
+}
+
+/* Dark modal variation */
+.modal-dark .modal-content {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.modal-dark .modal-header {
+    background-color: #000;
+}
+
+.modal-dark .modal-footer {
+    background-color: #111;
+}
+
+.modal-dark .btn-close {
+    color: white;
+}
+
+.modal-dark .modal-submessage {
+    color: #aaa;
+}
+
+/* Modal animation */
+.modal.fade .modal-dialog {
+    transform: scale(0.9);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.modal.show .modal-dialog {
+    transform: scale(1);
+    opacity: 1;
+}
+
+/* Delete confirmation modal specific styling */
+#deleteModal .modal-body {
+    padding-top: 2.5rem;
+    padding-bottom: 2rem;
+}
+
+#deleteModal .modal-icon {
+    color: var(--primary-color);
+}

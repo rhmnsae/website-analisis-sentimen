@@ -3,9 +3,9 @@ import time
 import threading
 import datetime
 import logging
-from functools import wraps
 import random
 import shutil
+from functools import wraps
 from flask import abort, jsonify, request, current_app, g
 
 # Dictionary untuk menyimpan status lock per user
@@ -82,7 +82,8 @@ class UserLock:
             if os.path.exists(self.lock_file):
                 os.remove(self.lock_file)
                 logger.info(f"Lock untuk user {self.user_id} dibersihkan secara paksa")
-            return True
+                return True
+            return True  # Kembalikan true bahkan jika file tidak ada
         except Exception as e:
             logger.error(f"Gagal membersihkan lock secara paksa: {e}")
             return False
@@ -105,7 +106,7 @@ def cleanup_all_locks():
         logger.error(f"Gagal membersihkan semua lock: {e}")
         return False
 
-def acquire_user_lock(user_id, timeout=30):
+def acquire_user_lock(user_id, timeout=10):  # Kurangi timeout ke 10 detik
     """
     Mencoba mendapatkan lock untuk user tertentu dengan retry
     
@@ -120,6 +121,12 @@ def acquire_user_lock(user_id, timeout=30):
         # Coba membersihkan lock terlebih dahulu jika ada
         # Ini membantu mengatasi skenario dimana lock sebelumnya tidak dilepaskan dengan benar
         lock_obj = UserLock(user_id)
+        
+        # PERBAIKAN: Jika parameter force_cleanup ada di URL, bersihkan lock
+        if request and request.args.get('force_cleanup', 'false').lower() == 'true':
+            lock_obj.force_cleanup()
+            logger.info(f"Lock untuk user {user_id} dibersihkan dari parameter URL")
+        
         lock_file = lock_obj.lock_file
         
         # Jika file lock ada, cek apakah sudah kadaluarsa
@@ -127,34 +134,44 @@ def acquire_user_lock(user_id, timeout=30):
             file_mtime = os.path.getmtime(lock_file)
             current_time = time.time()
             
-            # Jika lock lebih dari 5 menit, anggap kadaluarsa dan hapus
-            if current_time - file_mtime > 300:  # 5 menit
+            # Jika lock lebih dari 3 menit (lebih cepat dari sebelumnya), anggap kadaluarsa dan hapus
+            if current_time - file_mtime > 180:  # 3 menit, lebih pendek dari sebelumnya (5 menit)
                 try:
                     os.remove(lock_file)
-                    logger.info(f"Lock kadaluarsa untuk user {user_id} dihapus otomatis")
+                    logger.info(f"Lock kadaluarsa untuk user {user_id} dihapus otomatis (auto-expire)")
                 except Exception as e:
                     logger.error(f"Gagal menghapus lock kadaluarsa: {e}")
                     # Return True karena kita menganggap lock sudah kadaluarsa
                     # meskipun gagal menghapus file
                     return True
             else:
-                # Lock masih aktif, kemungkinan proses lain sedang berjalan
-                logger.warning(f"User {user_id} sudah memiliki lock aktif")
-                return False
+                # PERBAIKAN: Jika lock belum terlalu lama (kurang dari 30 detik), coba paksa hapus
+                if current_time - file_mtime < 30:
+                    try:
+                        os.remove(lock_file)
+                        logger.info(f"Lock untuk user {user_id} dibersihkan (baru dibuat)")
+                        # Jeda singkat untuk memastikan file benar-benar dihapus
+                        time.sleep(0.5)
+                    except Exception as e:
+                        logger.error(f"Gagal menghapus lock baru: {e}")
+                else:
+                    # Lock masih aktif, kemungkinan proses lain sedang berjalan
+                    logger.warning(f"User {user_id} sudah memiliki lock aktif")
+                    return False
         
         # Coba dapatkan lock dengan retry exponential backoff
         start_time = time.time()
         retry_count = 0
-        max_retries = 5
+        max_retries = 3  # Kurangi retry dari 5 ke 3
         
         while time.time() - start_time < timeout and retry_count < max_retries:
             if lock_obj.acquire():
                 _user_locks[user_id] = lock_obj
                 return True
             
-            # Exponential backoff dengan jitter untuk menghindari thundering herd
+            # Exponential backoff dengan jitter lebih pendek
             retry_count += 1
-            wait_time = min(2 ** retry_count + random.uniform(0, 1), timeout / 2)
+            wait_time = min(1 + random.uniform(0, 0.5), timeout / 3)  # Jeda lebih pendek
             logger.info(f"Mencoba acquire lock lagi dalam {wait_time:.2f} detik (retry {retry_count}/{max_retries})")
             time.sleep(wait_time)
         
@@ -214,16 +231,25 @@ class UserLockRequired:
         # Bersihkan lock jika diminta
         check_force_cleanup_parameter(user_id)
         
+        # PERBAIKAN: Auto cleanup lock yang berusia lebih dari 3 menit
+        lock_obj = UserLock(user_id)
+        if os.path.exists(lock_obj.lock_file):
+            file_mtime = os.path.getmtime(lock_obj.lock_file)
+            if time.time() - file_mtime > 180:  # 3 menit
+                lock_obj.force_cleanup()
+                logger.info(f"Lock kadaluarsa untuk user {user_id} dibersihkan otomatis")
+        
         # Coba dapatkan lock
         if not acquire_user_lock(user_id):
-            # Simpan informasi error ke variabel global untuk diakses di tempat lain
+            # PERBAIKAN: Buat response dengan opsi clean lock lebih jelas
             g.lock_error = True
             g.lock_user_id = user_id
             
             # Gunakan Flask abort untuk benar-benar menghentikan eksekusi function
             response = jsonify({
-                'error': 'Proses sebelumnya masih berjalan. Harap tunggu beberapa saat atau refresh halaman.',
-                'code': 'LOCK_EXISTS'
+                'error': 'Proses sebelumnya masih berjalan. Harap tunggu beberapa saat atau gunakan tombol "Bersihkan Lock".',
+                'code': 'LOCK_EXISTS',
+                'user_id': user_id
             })
             response.status_code = 429
             abort(response)
