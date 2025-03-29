@@ -45,6 +45,7 @@ ENV/
 Thumbs.db
 
 #db
+.app.db
 app.db
 
 locks/
