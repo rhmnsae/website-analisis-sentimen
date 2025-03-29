@@ -29,7 +29,7 @@
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
                             Input Data
                         </a>
-                        <a href="{{ url_for('main.hasil_analisis') }}" class="nav-tabs-link {% if request.endpoint == 'main.hasil_analisis' %}active{% endif %} {% if 'analysis_file' not in session %}disabled{% endif %}" {% if 'analysis_file' not in session %}title="Lakukan analisis terlebih dahulu"{% endif %}>
+                        <a href="{{ url_for('main.hasil_analisis') }}" class="nav-tabs-link {% if request.endpoint == 'main.hasil_analisis' %}active{% endif %} {% if request.endpoint != 'main.hasil_analisis' %}disabled{% endif %}" {% if request.endpoint != 'main.hasil_analisis' %}title="{% if request.endpoint == 'history.view' %}Anda sedang melihat hasil analisis{% elif request.endpoint == 'history.index' %}Pilih riwayat analisis untuk melihat detail{% else %}Lakukan analisis terlebih dahulu{% endif %}"{% endif %}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
                             Hasil Analisis
                         </a>

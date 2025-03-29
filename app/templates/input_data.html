@@ -64,7 +64,7 @@
                         {% if current_user.analyses %}
                             {% set recent_analyses = current_user.analyses|sort(attribute='created_at', reverse=True) %}
                             {% for analysis in recent_analyses %}
-                                {% if loop.index <= 5 %}
+                                {% if loop.index <= 6 %}
                                     <a href="{{ url_for('history.view', analysis_id=analysis.id) }}" class="list-group-item list-group-item-action animate-fade-in delay-{{ loop.index0 if loop.index0 < 10 else '9' }}">
                                         <div class="d-flex w-100 justify-content-between">
                                             <h6 class="mb-1">{{ analysis.title }}</h6>
@@ -95,7 +95,6 @@
                     {% if current_user.analyses %}
                     <div class="text-center mt-3">
                         <a href="{{ url_for('history.index') }}" class="btn btn-sm btn-outline-dark">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                             Lihat Semua Riwayat
                         </a>
                     </div>
