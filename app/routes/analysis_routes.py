@@ -189,6 +189,7 @@ def get_analysis_data():
         return jsonify({'error': str(e)}), 500
 
 
+# Modifikasi untuk fungsi upload_file dalam file app/routes/analysis_routes.py
 @analysis_bp.route('/upload', methods=['POST', 'GET'])
 @login_required
 @user_lock_required  # Tambahkan decorator untuk lock per user
@@ -204,7 +205,6 @@ def upload_file():
     
     # Logging untuk memulai proses
     current_app.logger.info(f"User {current_user.id} ({current_user.username}) memulai upload dan analisis file")
-
     
     try:
         # 1. Validasi awal dan persiapan
@@ -268,7 +268,13 @@ def upload_file():
                 
                 # PENTING: Hanya ada satu pemanggilan predict_sentiments di sini
                 try:
+                    # Tambahkan log sebelum memanggil predict_sentiments
+                    current_app.logger.info(f"Memanggil fungsi predict_sentiments untuk file: {file_path}")
+                    
                     result_df = predict_sentiments(file_path)
+                    
+                    # Tambahkan log setelah predict_sentiments berhasil
+                    current_app.logger.info(f"predict_sentiments berhasil - jumlah baris: {len(result_df)}")
                 except Exception as e:
                     current_app.logger.error(f"Error pada predict_sentiments: {e}")
                     return jsonify({'error': f'Gagal melakukan analisis sentimen: {str(e)}'})

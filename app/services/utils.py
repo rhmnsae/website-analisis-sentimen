@@ -240,33 +240,123 @@ class UserLockRequired:
                 logger.info(f"Lock kadaluarsa untuk user {user_id} dibersihkan otomatis")
         
         # Coba dapatkan lock
-        if not acquire_user_lock(user_id):
-            # PERBAIKAN: Buat response dengan opsi clean lock lebih jelas
-            g.lock_error = True
-            g.lock_user_id = user_id
-            
-            # Gunakan Flask abort untuk benar-benar menghentikan eksekusi function
-            response = jsonify({
-                'error': 'Proses sebelumnya masih berjalan. Harap tunggu beberapa saat atau gunakan tombol "Bersihkan Lock".',
-                'code': 'LOCK_EXISTS',
-                'user_id': user_id
-            })
-            response.status_code = 429
-            abort(response)
-        
+        lock_acquired = False
         try:
+            # Tambahkan log sebelum mencoba acquire lock
+            logger.info(f"Mencoba mendapatkan lock untuk user {user_id}")
+            
+            lock_acquired = acquire_user_lock(user_id)
+            
+            # Tambahkan log setelah acquire lock
+            logger.info(f"Status lock untuk user {user_id}: {'Berhasil' if lock_acquired else 'Gagal'}")
+            
+            if not lock_acquired:
+                # PERBAIKAN: Buat response dengan informasi lebih detail
+                lock_duration = 0
+                try:
+                    if os.path.exists(lock_obj.lock_file):
+                        file_mtime = os.path.getmtime(lock_obj.lock_file)
+                        lock_duration = int(time.time() - file_mtime)
+                except:
+                    pass
+                
+                response_data = {
+                    'error': 'Proses sebelumnya masih berjalan. Harap tunggu beberapa saat atau gunakan tombol "Bersihkan Lock" untuk mengatasi masalah.',
+                    'code': 'LOCK_EXISTS',
+                    'user_id': user_id,
+                    'lock_duration': lock_duration
+                }
+                
+                g.lock_error = True
+                g.lock_user_id = user_id
+                
+                # Gunakan Flask abort untuk benar-benar menghentikan eksekusi function
+                response = jsonify(response_data)
+                response.status_code = 429
+                abort(response)
+            
             # Jalankan fungsi yang dibungkus
-            return self.f(*args, **kwargs)
-        except Exception as e:
-            current_app.logger.error(f"Error saat menjalankan fungsi: {e}")
-            # Pastikan lock dilepaskan sebelum meneruskan exception
-            release_user_lock(user_id)
-            raise
+            try:
+                # Log bahwa fungsi dijalankan dengan lock
+                logger.info(f"Menjalankan fungsi {self.f.__name__} dengan lock untuk user {user_id}")
+                return self.f(*args, **kwargs)
+            except Exception as e:
+                current_app.logger.error(f"Error saat menjalankan fungsi {self.f.__name__}: {e}")
+                # Pastikan lock dilepaskan sebelum meneruskan exception
+                if lock_acquired:
+                    release_user_lock(user_id)
+                    current_app.logger.info(f"Lock untuk user {user_id} dilepaskan setelah error")
+                raise
         finally:
-            # Pastikan lock selalu dilepaskan setelah selesai
-            release_user_lock(user_id)
-            current_app.logger.info(f"Lock untuk user {user_id} dilepaskan setelah fungsi selesai")
+            # Pastikan lock selalu dilepaskan setelah selesai jika berhasil diakuisisi
+            if lock_acquired:
+                release_user_lock(user_id)
+                current_app.logger.info(f"Lock untuk user {user_id} dilepaskan setelah fungsi selesai")
 
 # Backward compatibility dengan decorator style lama
 def user_lock_required(f):
     return UserLockRequired(f)
+
+# Perbaikan fungsi untuk acquire lock
+def acquire_user_lock(user_id, timeout=10):  # Kurangi timeout ke 10 detik
+    """
+    Mencoba mendapatkan lock untuk user tertentu dengan retry
+    
+    Args:
+        user_id: ID user yang ingin mendapatkan lock
+        timeout: Waktu maksimal tunggu dalam detik
+    
+    Returns:
+        True jika berhasil mendapatkan lock, False jika gagal
+    """
+    with _global_lock:
+        # Coba membersihkan lock terlebih dahulu jika ada
+        # Ini membantu mengatasi skenario dimana lock sebelumnya tidak dilepaskan dengan benar
+        lock_obj = UserLock(user_id)
+        
+        # PERBAIKAN: Jika parameter force_cleanup ada di URL, bersihkan lock
+        if request and request.args.get('force_cleanup', 'false').lower() == 'true':
+            lock_obj.force_cleanup()
+            logger.info(f"Lock untuk user {user_id} dibersihkan dari parameter URL")
+        
+        lock_file = lock_obj.lock_file
+        
+        # Jika file lock ada, cek apakah sudah kadaluarsa
+        if os.path.exists(lock_file):
+            file_mtime = os.path.getmtime(lock_file)
+            current_time = time.time()
+            
+            # Jika lock lebih dari 3 menit (lebih cepat dari sebelumnya), anggap kadaluarsa dan hapus
+            if current_time - file_mtime > 180:  # 3 menit, lebih pendek dari sebelumnya (5 menit)
+                try:
+                    os.remove(lock_file)
+                    logger.info(f"Lock kadaluarsa untuk user {user_id} dihapus otomatis (auto-expire)")
+                except Exception as e:
+                    logger.error(f"Gagal menghapus lock kadaluarsa: {e}")
+                    # Return True karena kita menganggap lock sudah kadaluarsa
+                    # meskipun gagal menghapus file
+                    return True
+            else:
+                # PERBAIKAN: Jika lock belum terlalu lama (kurang dari 30 detik), coba paksa hapus
+                if current_time - file_mtime < 30:
+                    try:
+                        os.remove(lock_file)
+                        logger.info(f"Lock untuk user {user_id} dibersihkan (baru dibuat)")
+                        # Jeda singkat untuk memastikan file benar-benar dihapus
+                        time.sleep(0.5)
+                    except Exception as e:
+                        logger.error(f"Gagal menghapus lock baru: {e}")
+                        return False
+                else:
+                    # Lock masih aktif, kemungkinan proses lain sedang berjalan
+                    logger.warning(f"User {user_id} sudah memiliki lock aktif (~{int(current_time - file_mtime)}s)")
+                    return False
+        
+        # Coba mendapatkan lock
+        if lock_obj.acquire():
+            _user_locks[user_id] = lock_obj
+            logger.info(f"Lock berhasil diakuisisi untuk user {user_id}")
+            return True
+        
+        logger.error(f"Gagal mendapatkan lock untuk user {user_id}")
+        return False

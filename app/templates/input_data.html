@@ -184,6 +184,7 @@
 
 {% block scripts %}
 <script>
+    // Di app/templates/input_data.html bagian script
     document.addEventListener('DOMContentLoaded', function() {
         // Form submission handling
         const analysisForm = document.getElementById('analysis-form');
@@ -198,33 +199,42 @@
                 e.preventDefault();
                 
                 // Cek apakah sedang dalam proses submit
-                if (isSubmitting) {
+                if (isSubmitting || submitBtn.disabled) {
                     console.log('Form sedang diproses, mencegah submit ganda');
                     return false;
                 }
                 
-                // Set flag submission
+                // Set flag submission dan disable button segera
                 isSubmitting = true;
-                
-                // Show loading indicator and disable submit button
-                loadingIndicator.classList.remove('d-none');
                 submitBtn.disabled = true;
                 
-                // Ubah teks tombol
+                // Show loading indicator and update button text
+                loadingIndicator.classList.remove('d-none');
                 submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Sedang Memproses...';
                 
                 // Get form data
                 const formData = new FormData();
-                formData.append('title', document.getElementById('title').value);
-                formData.append('description', document.getElementById('description')?.value || '');
-                formData.append('csv-file', document.getElementById('csv-file').files[0]);
+                
+                const title = document.getElementById('title').value;
+                const description = document.getElementById('description')?.value || '';
+                const csvFile = document.getElementById('csv-file').files[0];
+                
+                if (!csvFile) {
+                    showAlert('Silakan unggah file CSV terlebih dahulu.', 'warning');
+                    resetSubmitButton();
+                    return;
+                }
+                
+                formData.append('title', title);
+                formData.append('description', description);
+                formData.append('csv-file', csvFile);
                 
                 // Log information
                 console.log('Memulai analisis file...');
                 
                 // Send to server with explicit timeout
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 menit timeout
+                const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 menit timeout
                 
                 fetch('/upload', {
                     method: 'POST',
@@ -233,28 +243,64 @@
                 })
                 .then(response => {
                     clearTimeout(timeoutId);
+                    
+                    if (response.status === 429) {
+                        return response.json().then(errorData => {
+                            if (errorData.code === 'LOCK_EXISTS') {
+                                showAlert(`Proses analisis sebelumnya masih berjalan. Harap tunggu beberapa saat atau bersihkan lock.`, 'warning');
+                                
+                                // Tambahkan tombol untuk membersihkan lock
+                                const cleanLockBtn = document.createElement('button');
+                                cleanLockBtn.className = 'btn btn-sm btn-warning ms-2';
+                                cleanLockBtn.innerHTML = 'Bersihkan Lock';
+                                cleanLockBtn.onclick = function() {
+                                    fetch('/clean-lock')
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.status === 'success') {
+                                            showAlert(data.message, 'success');
+                                            resetSubmitButton();
+                                        } else {
+                                            showAlert(data.message, 'warning');
+                                        }
+                                    });
+                                };
+                                
+                                const alertContainer = document.getElementById('alert-container');
+                                if (alertContainer.lastChild) {
+                                    const btnContainer = document.createElement('div');
+                                    btnContainer.className = 'mt-2';
+                                    btnContainer.appendChild(cleanLockBtn);
+                                    alertContainer.lastChild.appendChild(btnContainer);
+                                }
+                                
+                                resetSubmitButton();
+                                return null;
+                            }
+                            throw new Error(`Server terlalu sibuk: ${errorData.error || 'Terlalu banyak permintaan'}`);
+                        });
+                    }
+                    
                     if (!response.ok) {
                         throw new Error(`Server error: ${response.status} ${response.statusText}`);
                     }
+                    
                     return response.json();
                 })
                 .then(data => {
-                    // Reset flag
-                    isSubmitting = false;
-                    
-                    // Hide loading indicator
-                    loadingIndicator.classList.add('d-none');
+                    if (!data) return; // Skip if null (during lock error handling)
                     
                     if (data.error) {
                         showAlert('Error: ' + data.error, 'danger');
-                        // Re-enable button with original text
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Mulai Analisis';
+                        resetSubmitButton();
                         return;
                     }
                     
                     // Menampilkan informasi sukses sebelum redirect
                     showAlert('Analisis selesai! Mengalihkan ke halaman hasil...', 'success');
+                    
+                    // Tambahkan animasi loading overlay sebelum redirect
+                    addLoadingOverlay();
                     
                     // Delay redirect untuk memungkinkan pesan dilihat
                     setTimeout(() => {
@@ -265,24 +311,35 @@
                 .catch(error => {
                     console.error('Error during form submission:', error);
                     
-                    // Reset flag
-                    isSubmitting = false;
+                    if (error.name === 'AbortError') {
+                        showAlert('Error: Waktu permintaan habis. File mungkin terlalu besar atau server sedang sibuk.', 'danger');
+                    } else {
+                        showAlert('Error: ' + error.message, 'danger');
+                    }
                     
-                    // Show error message
-                    loadingIndicator.classList.add('d-none');
-                    showAlert('Error: ' + error.message, 'danger');
-                    
-                    // Re-enable button with original text
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Mulai Analisis';
+                    resetSubmitButton();
                 });
             });
         }
         
-        // Function to show alert
+        function resetSubmitButton() {
+            isSubmitting = false;
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Mulai Analisis';
+            loadingIndicator.classList.add('d-none');
+        }
+        
         function showAlert(message, type) {
             const alertContainer = document.getElementById('alert-container');
             if (!alertContainer) return;
+            
+            // Remove any existing alerts with the same message to prevent duplicates
+            const existingAlerts = alertContainer.querySelectorAll('.alert');
+            existingAlerts.forEach(alert => {
+                if (alert.textContent.trim().includes(message)) {
+                    alert.remove();
+                }
+            });
             
             const alert = document.createElement('div');
             alert.className = `alert alert-${type} alert-dismissible fade show animate-fade-in`;
@@ -299,6 +356,24 @@
                 alert.classList.remove('show');
                 setTimeout(() => alert.remove(), 300);
             }, 5000);
+        }
+        
+        function addLoadingOverlay() {
+            const overlay = document.createElement('div');
+            overlay.className = 'loading-overlay';
+            overlay.innerHTML = `
+                <div class="loading-content">
+                    <div class="spinner-border loading-spinner text-dark" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h5 class="loading-title">Mempersiapkan Hasil Analisis</h5>
+                    <p class="loading-message">Mengalihkan ke halaman hasil analisis...</p>
+                    <div class="loading-progress-container">
+                        <div class="loading-progress-bar progress-step-2"></div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
         }
     });
 </script>

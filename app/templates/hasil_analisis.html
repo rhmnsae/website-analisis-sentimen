@@ -295,36 +295,119 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Fetch analysis data dari server
-        fetch('/api/analysis-data')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Gagal mengambil data analisis');
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Jika berhasil mendapatkan data
-                if (data) {
-                    // Update UI dengan data
-                    updateAnalysisResults(data);
-                    
-                    // Inisialisasi pagination
-                    initializePagination();
-                    
-                    // Generate topics untuk chatbot
-                    generateTopics(data);
-                    
-                    // Buat word cloud
-                    createImprovedWordCloud(data);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showAlert('Gagal memuat data analisis: ' + error.message, 'danger');
-            });
+        // Definisikan loading overlay
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingProgress = document.getElementById('loading-progress');
+        const loadingStatus = document.getElementById('loading-status');
         
-        // Function to show alert
+        // Fungsi untuk update status loading
+        function updateLoadingStatus(step, message) {
+            if (loadingProgress) {
+                loadingProgress.classList.remove('progress-step-1', 'progress-step-2', 'progress-step-3', 'progress-step-4');
+                loadingProgress.classList.add(`progress-step-${step}`);
+            }
+            
+            if (loadingStatus) {
+                // Animasi fade out lalu fade in dengan pesan baru
+                loadingStatus.style.transition = 'opacity 0.3s ease';
+                loadingStatus.style.opacity = 0;
+                
+                setTimeout(() => {
+                    loadingStatus.textContent = message;
+                    loadingStatus.style.opacity = 1;
+                }, 300);
+            }
+        }
+        
+        // Mulai dengan step 1
+        updateLoadingStatus(1, "Mengunduh dan menyiapkan data...");
+        
+        // Tambahkan timeout untuk step berikutnya untuk simulasi progress
+        setTimeout(() => {
+            updateLoadingStatus(2, "Menginisialisasi komponen visual...");
+            
+            // Fetch analysis data setelah delay pendek
+            setTimeout(() => {
+                fetchAnalysisData();
+            }, 300);
+        }, 800);
+        
+        // Fungsi untuk menyembunyikan overlay loading
+        function hideLoadingOverlay() {
+            if (!loadingOverlay) return;
+            
+            // Tampilkan step terakhir
+            updateLoadingStatus(4, "Analisis berhasil dimuat!");
+            
+            // Tunggu sebentar lalu fade out
+            setTimeout(() => {
+                loadingOverlay.classList.add('fade-out');
+                setTimeout(() => {
+                    loadingOverlay.style.display = 'none';
+                }, 500);
+            }, 500);
+        }
+
+        // Fungsi untuk fetch data analisis
+        function fetchAnalysisData() {
+            updateLoadingStatus(3, "Memuat hasil analisis sentimen...");
+            
+            fetch('/api/analysis-data')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Gagal mengambil data analisis');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Data analisis berhasil dimuat");
+                    
+                    // Tunggu sedikit lebih lama sebelum menghilangkan loading
+                    // untuk memastikan semua aset lain juga dimuat
+                    setTimeout(() => {
+                        // Store global analysis results
+                        window.analysisResults = data;
+                        window.allTweets = data.tweets || [];
+                        
+                        // Update UI with analysis results
+                        updateAnalysisResults(data);
+                        
+                        // Initialize pagination
+                        initializePagination();
+                        
+                        // Generate topics automatically
+                        generateTopics(data);
+                        
+                        // Create word cloud
+                        createImprovedWordCloud(data);
+                        
+                        // Sembunyikan loading overlay
+                        hideLoadingOverlay();
+                    }, 500);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    
+                    // Update pesan loading menjadi error
+                    updateLoadingStatus(1, "Gagal memuat data: " + error.message);
+                    
+                    // Tambahkan tombol retry
+                    const loadingContent = document.querySelector('.loading-content');
+                    if (loadingContent) {
+                        const retryButton = document.createElement('button');
+                        retryButton.className = 'btn btn-dark mt-3';
+                        retryButton.innerHTML = 'Coba Lagi';
+                        retryButton.onclick = () => {
+                            window.location.reload();
+                        };
+                        loadingContent.appendChild(retryButton);
+                    }
+                    
+                    showAlert('Gagal memuat data analisis: ' + error.message, 'danger');
+                });
+        }
+
+        // Fungsi untuk show alert
         function showAlert(message, type) {
             const alertContainer = document.getElementById('alert-container');
             if (!alertContainer) return;
@@ -344,37 +427,6 @@
                 alert.classList.remove('show');
                 setTimeout(() => alert.remove(), 300);
             }, 5000);
-        }
-
-        function updateLoadingStatus(step, message) {
-            const loadingProgress = document.getElementById('loading-progress');
-            const loadingStatus = document.getElementById('loading-status');
-            
-            if (loadingProgress) {
-                loadingProgress.classList.remove('progress-step-1', 'progress-step-2', 'progress-step-3', 'progress-step-4');
-                loadingProgress.classList.add(`progress-step-${step}`);
-            }
-            
-            if (loadingStatus) {
-                // Animasi fade out lalu fade in dengan pesan baru
-                loadingStatus.style.opacity = 0;
-                
-                setTimeout(() => {
-                    loadingStatus.textContent = message;
-                    loadingStatus.style.opacity = 1;
-                }, 300);
-            }
-        }
-
-        // Setelah data dimuat
-        function hideLoadingOverlay() {
-            const overlay = document.getElementById('loading-overlay');
-            if (overlay) {
-                overlay.classList.add('fade-out');
-                setTimeout(() => {
-                    overlay.style.display = 'none';
-                }, 500);
-            }
         }
     });
 </script>

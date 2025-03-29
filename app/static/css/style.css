@@ -1413,10 +1413,6 @@ footer h5 svg {
 .progress-step-3 { width: 75% !important; }
 .progress-step-4 { width: 100% !important; }
 
-
-/* Tambahkan CSS ini ke app/static/css/style.css */
-
-/* Improved Loading Overlay */
 .loading-overlay {
     position: fixed;
     top: 0;
@@ -1503,6 +1499,7 @@ footer h5 svg {
 .loading-progress-bar.progress-step-2 { width: 50%; }
 .loading-progress-bar.progress-step-3 { width: 75%; }
 .loading-progress-bar.progress-step-4 { width: 100%; }
+
 
 /* Untuk loading dalam halaman hasil analisis */
 #loading-overlay {
