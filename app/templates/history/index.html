@@ -10,7 +10,7 @@
             <h2 class="card-title mb-0 ms-2">Riwayat Analisis</h2>
         </div>
         <a href="{{ url_for('main.input_data') }}" class="btn btn-dark">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             Analisis Baru
         </a>
     </div>
@@ -92,34 +92,9 @@
                                         <a href="{{ url_for('analysis.download_report') }}?id={{ analysis.id }}" class="btn btn-sm btn-outline-dark">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                                         </a>
-                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal-{{ analysis.id }}">
+                                        <button type="button" class="btn btn-sm btn-outline-danger delete-button" data-analysis-id="{{ analysis.id }}" data-analysis-title="{{ analysis.title }}">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                         </button>
-                                    </div>
-                                    
-                                    <!-- Modal konfirmasi hapus -->
-                                    <div class="modal fade" id="deleteModal-{{ analysis.id }}" tabindex="-1" aria-hidden="true">
-                                        <div class="modal-dialog modal-dialog-centered">
-                                            <div class="modal-content border-0">
-                                                <div class="modal-header border-0">
-                                                    <h5 class="modal-title">Konfirmasi Hapus</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                </div>
-                                                <div class="modal-body text-center">
-                                                    <div class="mb-4">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-danger"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                                                        <h5 class="mt-3">Hapus analisis "{{ analysis.title }}"?</h5>
-                                                        <p class="text-muted">Tindakan ini tidak dapat dibatalkan.</p>
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer border-0">
-                                                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                                                    <form action="{{ url_for('history.delete', analysis_id=analysis.id) }}" method="POST">
-                                                        <button type="submit" class="btn btn-danger">Hapus</button>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
                                     </div>
                                 </td>
                             </tr>
@@ -182,7 +157,33 @@
         {% endif %}
     </div>
 </div>
+
+<!-- PENTING: Modal ditempatkan di luar tabel tapi masih dalam block content -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content border-0">
+            <div class="modal-header border-0">
+                <h5 class="modal-title" id="deleteModalLabel">Konfirmasi Hapus</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-danger"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    <h5 class="mt-3">Hapus analisis "<span id="analysis-title-text"></span>"?</h5>
+                    <p class="text-muted">Tindakan ini tidak dapat dibatalkan.</p>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                <form id="deleteForm" method="POST">
+                    <button type="submit" class="btn btn-danger">Hapus</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
+
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -246,6 +247,93 @@
         
         if (itemsPerPage) {
             itemsPerPage.addEventListener('change', updateFilters);
+        }
+
+        // Set up modal for delete confirmation
+        try {
+            console.log("Setting up delete modal functionality");
+            
+            // Get references to DOM elements
+            const deleteButtons = document.querySelectorAll('.delete-button');
+            const deleteModal = document.getElementById('deleteModal');
+            const analysisTitleSpan = document.getElementById('analysis-title-text');
+            const deleteForm = document.getElementById('deleteForm');
+            
+            if (!deleteModal) {
+                console.error("Delete modal element not found!");
+                return;
+            }
+            
+            // Create modal instance using Bootstrap
+            let modalInstance = null;
+            try {
+                modalInstance = new bootstrap.Modal(deleteModal);
+                console.log("Bootstrap modal initialized successfully");
+            } catch (error) {
+                console.error("Error initializing Bootstrap modal:", error);
+            }
+            
+            // Add event listeners to delete buttons
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Get data attributes
+                    const analysisId = this.getAttribute('data-analysis-id');
+                    const analysisTitle = this.getAttribute('data-analysis-title');
+                    
+                    console.log(`Delete button clicked for analysis: ${analysisId} - ${analysisTitle}`);
+                    
+                    // Update modal content
+                    if (analysisTitleSpan) {
+                        analysisTitleSpan.textContent = analysisTitle;
+                    }
+                    
+                    // Set form action
+                    if (deleteForm) {
+                        deleteForm.action = `/history/${analysisId}/delete`;
+                        console.log("Set delete form action:", deleteForm.action);
+                    }
+                    
+                    // Show the modal
+                    if (modalInstance) {
+                        modalInstance.show();
+                    } else {
+                        console.error("Modal instance not available");
+                    }
+                });
+            });
+            
+            // Add form submission handler
+            if (deleteForm) {
+                deleteForm.addEventListener('submit', function(e) {
+                    console.log("Delete form submitted:", this.action);
+                    
+                    // Create and show loading overlay
+                    const overlay = document.createElement('div');
+                    overlay.className = 'loading-overlay';
+                    overlay.style.position = 'fixed';
+                    overlay.style.top = '0';
+                    overlay.style.left = '0';
+                    overlay.style.width = '100%';
+                    overlay.style.height = '100%';
+                    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+                    overlay.style.display = 'flex';
+                    overlay.style.justifyContent = 'center';
+                    overlay.style.alignItems = 'center';
+                    overlay.style.zIndex = '9999';
+                    
+                    overlay.innerHTML = `
+                        <div class="spinner-border text-light" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    `;
+                    
+                    document.body.appendChild(overlay);
+                });
+            }
+        } catch (error) {
+            console.error("Error setting up delete functionality:", error);
         }
     });
 </script>
