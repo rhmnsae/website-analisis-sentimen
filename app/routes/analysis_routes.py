@@ -206,245 +206,270 @@ def upload_file():
     # Logging untuk memulai proses
     current_app.logger.info(f"User {current_user.id} ({current_user.username}) memulai upload dan analisis file")
     
-    # 1. Validasi awal dan persiapan
-    # Verifikasi model terlatih ada
-    if not os.path.exists(current_app.config['MODEL_PATH']):
-        current_app.logger.error(f"Model tidak ditemukan di {current_app.config['MODEL_PATH']}")
-        return jsonify({
-            'error': f'Model terlatih tidak ditemukan: {current_app.config["MODEL_PATH"]}. '
-                     f'Mohon pindahkan model Anda ke folder models/'
-        })
-    
-    # Cek apakah ada file yang diunggah
-    if 'csv-file' not in request.files:
-        current_app.logger.warning("Tidak ada bagian file dalam request")
-        return jsonify({'error': 'No file part'})
-    
-    file = request.files['csv-file']
-    if file.filename == '':
-        current_app.logger.warning("Nama file kosong")
-        return jsonify({'error': 'No selected file'})
-    
-    # 2. Proses file yang diunggah
-    if file:
-        try:
-            # Dapatkan data dari form
-            title = request.form.get('title', 'Analisis Sentimen X').strip()
-            description = request.form.get('description', '').strip()
-            
-            current_app.logger.info(f"Memproses analisis: {title}")
-            
-            # Generate timestamp untuk membuat file dan nama analisis unik
-            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-            
-            # Cek apakah analisis dengan judul yang sama sudah ada
-            existing_analysis = Analysis.query.filter_by(
-                user_id=current_user.id, 
-                title=title
-            ).first()
-            
-            # Jika judul sudah ada, tambahkan timestamp ke judul
-            original_title = title
-            if existing_analysis:
-                title = f"{original_title} ({timestamp})"
-                current_app.logger.info(f"Judul duplikat terdeteksi. Mengubah judul menjadi '{title}'")
-            
-            # Buat nama file yang aman dan unik dengan timestamp
-            secure_name = secure_filename(file.filename)
-            unique_filename = f"{timestamp}_{secure_name}"
-            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_filename)
-            
-            # Simpan file yang diunggah
-            file.save(file_path)
-            current_app.logger.info(f"File berhasil disimpan di: {file_path}")
-            
-            # 3. Proses analisis sentimen
-            # Tentukan path output hasil analisis
-            output_file = os.path.join(current_app.config['UPLOAD_FOLDER'], f'analyzed_{unique_filename}')
-            
-            # Proses file untuk analisis sentimen
-            current_app.logger.info(f"Memulai analisis sentimen untuk file: {file_path}")
-            
-            # PENTING: Hanya ada satu pemanggilan predict_sentiments di sini
-            result_df = predict_sentiments(file_path)
-            
-            # Simpan hasil analisis ke CSV
-            result_df.to_csv(output_file, index=False)
-            
-            # Simpan path ke session
-            session['analysis_file'] = output_file
-            
-            # 4. Siapkan data untuk respons dan database
-            # Hitung statistik
-            sentiment_counts = result_df['predicted_sentiment'].value_counts()
-            total_tweets = len(result_df)
-            
-            # Siapkan data untuk tampilan
-            positive_count = int(sentiment_counts.get('Positif', 0))
-            neutral_count = int(sentiment_counts.get('Netral', 0))
-            negative_count = int(sentiment_counts.get('Negatif', 0))
-            
-            # Hitung persentase
-            positive_percent = round((positive_count / total_tweets * 100), 1) if total_tweets > 0 else 0
-            neutral_percent = round((neutral_count / total_tweets * 100), 1) if total_tweets > 0 else 0
-            negative_percent = round((negative_count / total_tweets * 100), 1) if total_tweets > 0 else 0
-            
-            # Ekstrak data tambahan
-            current_app.logger.info(f"Mengekstrak informasi tambahan (hashtags, topik, dll)")
-            hashtag_counts = extract_hashtags(result_df)
-            topics = extract_topics(result_df)
-            hashtag_sentiment = analyze_sentiment_per_hashtag(result_df)
-            top_users = get_top_users(result_df)
-            
-            # Ekstrak kata-kata berdasarkan sentimen
+    try:
+        # 1. Validasi awal dan persiapan
+        # Verifikasi model terlatih ada
+        if not os.path.exists(current_app.config['MODEL_PATH']):
+            current_app.logger.error(f"Model tidak ditemukan di {current_app.config['MODEL_PATH']}")
+            return jsonify({
+                'error': f'Model terlatih tidak ditemukan: {current_app.config["MODEL_PATH"]}. '
+                         f'Mohon pindahkan model Anda ke folder models/'
+            })
+        
+        # Cek apakah ada file yang diunggah
+        if 'csv-file' not in request.files:
+            current_app.logger.warning("Tidak ada bagian file dalam request")
+            return jsonify({'error': 'No file part'})
+        
+        file = request.files['csv-file']
+        if file.filename == '':
+            current_app.logger.warning("Nama file kosong")
+            return jsonify({'error': 'No selected file'})
+        
+        # 2. Proses file yang diunggah
+        if file:
             try:
-                sentiment_words = extract_words_by_sentiment(result_df)
-            except Exception as e:
-                current_app.logger.error(f"Error dalam ekstraksi kata berdasarkan sentimen: {e}")
-                sentiment_words = {
-                    'positive': [],
-                    'neutral': [],
-                    'negative': []
+                # Dapatkan data dari form
+                title = request.form.get('title', 'Analisis Sentimen X').strip()
+                description = request.form.get('description', '').strip()
+                
+                current_app.logger.info(f"Memproses analisis: {title}")
+                
+                # Generate timestamp untuk membuat file dan nama analisis unik
+                timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+                
+                # Cek apakah analisis dengan judul yang sama sudah ada
+                existing_analysis = Analysis.query.filter_by(
+                    user_id=current_user.id, 
+                    title=title
+                ).first()
+                
+                # Jika judul sudah ada, tambahkan timestamp ke judul
+                original_title = title
+                if existing_analysis:
+                    title = f"{original_title} ({timestamp})"
+                    current_app.logger.info(f"Judul duplikat terdeteksi. Mengubah judul menjadi '{title}'")
+                
+                # Buat nama file yang aman dan unik dengan timestamp
+                secure_name = secure_filename(file.filename)
+                unique_filename = f"{timestamp}_{secure_name}"
+                file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_filename)
+                
+                # Simpan file yang diunggah
+                file.save(file_path)
+                current_app.logger.info(f"File berhasil disimpan di: {file_path}")
+                
+                # 3. Proses analisis sentimen
+                # Tentukan path output hasil analisis
+                output_file = os.path.join(current_app.config['UPLOAD_FOLDER'], f'analyzed_{unique_filename}')
+                
+                # Proses file untuk analisis sentimen
+                current_app.logger.info(f"Memulai analisis sentimen untuk file: {file_path}")
+                
+                # PENTING: Hanya ada satu pemanggilan predict_sentiments di sini
+                try:
+                    result_df = predict_sentiments(file_path)
+                except Exception as e:
+                    current_app.logger.error(f"Error pada predict_sentiments: {e}")
+                    return jsonify({'error': f'Gagal melakukan analisis sentimen: {str(e)}'})
+                
+                # Simpan hasil analisis ke CSV
+                result_df.to_csv(output_file, index=False)
+                
+                # Simpan path ke session
+                session['analysis_file'] = output_file
+                
+                # 4. Siapkan data untuk respons dan database
+                # Hitung statistik
+                try:
+                    sentiment_counts = result_df['predicted_sentiment'].value_counts()
+                    total_tweets = len(result_df)
+                except Exception as e:
+                    current_app.logger.error(f"Error saat menghitung statistik: {e}")
+                    return jsonify({'error': f'Gagal menghitung statistik: {str(e)}'})
+                
+                # Siapkan data untuk tampilan
+                positive_count = int(sentiment_counts.get('Positif', 0))
+                neutral_count = int(sentiment_counts.get('Netral', 0))
+                negative_count = int(sentiment_counts.get('Negatif', 0))
+                
+                # Hitung persentase
+                positive_percent = round((positive_count / total_tweets * 100), 1) if total_tweets > 0 else 0
+                neutral_percent = round((neutral_count / total_tweets * 100), 1) if total_tweets > 0 else 0
+                negative_percent = round((negative_count / total_tweets * 100), 1) if total_tweets > 0 else 0
+                
+                # Ekstrak data tambahan
+                current_app.logger.info(f"Mengekstrak informasi tambahan (hashtags, topik, dll)")
+                
+                try:
+                    hashtag_counts = extract_hashtags(result_df)
+                    topics = extract_topics(result_df)
+                    hashtag_sentiment = analyze_sentiment_per_hashtag(result_df)
+                    top_users = get_top_users(result_df)
+                except Exception as e:
+                    current_app.logger.error(f"Error saat ekstraksi informasi tambahan: {e}")
+                    # Lanjutkan meskipun ada error pada ekstraksi tambahan
+                
+                # Ekstrak kata-kata berdasarkan sentimen
+                try:
+                    sentiment_words = extract_words_by_sentiment(result_df)
+                except Exception as e:
+                    current_app.logger.error(f"Error dalam ekstraksi kata berdasarkan sentimen: {e}")
+                    sentiment_words = {
+                        'positive': [],
+                        'neutral': [],
+                        'negative': []
+                    }
+                
+                # Buat visualisasi
+                try:
+                    sentiment_plot = create_sentiment_plot(result_df)
+                except Exception as e:
+                    current_app.logger.error(f"Error saat membuat plot sentimen: {e}")
+                    sentiment_plot = None
+                
+                try:
+                    word_cloud = create_improved_word_cloud(result_df)
+                except Exception as e:
+                    current_app.logger.error(f"Error saat membuat word cloud: {e}")
+                    word_cloud = None
+                
+                # 5. Persiapkan data untuk respons JSON dan database
+                analysis_results = {
+                    'title': title,
+                    'description': description,
+                    'total_tweets': total_tweets,
+                    'positive_count': positive_count,
+                    'neutral_count': neutral_count,
+                    'negative_count': negative_count,
+                    'positive_percent': positive_percent,
+                    'neutral_percent': neutral_percent,
+                    'negative_percent': negative_percent,
+                    'top_hashtags': [{'tag': tag, 'count': count} for tag, count in hashtag_counts.most_common(10)],
+                    'topics': topics,
+                    'hashtag_sentiment': hashtag_sentiment,
+                    'top_users': top_users,
+                    'sentiment_words': {
+                        'positive': sentiment_words.get('positive', []),
+                        'neutral': sentiment_words.get('neutral', []),
+                        'negative': sentiment_words.get('negative', [])
+                    },
+                    'sentiment_plot': sentiment_plot,
+                    'word_cloud': word_cloud if word_cloud else None
                 }
-            
-            # Buat visualisasi
-            sentiment_plot = create_sentiment_plot(result_df)
-            
-            try:
-                word_cloud = create_improved_word_cloud(result_df)
-            except Exception as e:
-                current_app.logger.error(f"Error saat membuat word cloud: {e}")
-                word_cloud = None
-            
-            # 5. Persiapkan data untuk respons JSON dan database
-            analysis_results = {
-                'title': title,
-                'description': description,
-                'total_tweets': total_tweets,
-                'positive_count': positive_count,
-                'neutral_count': neutral_count,
-                'negative_count': negative_count,
-                'positive_percent': positive_percent,
-                'neutral_percent': neutral_percent,
-                'negative_percent': negative_percent,
-                'top_hashtags': [{'tag': tag, 'count': count} for tag, count in hashtag_counts.most_common(10)],
-                'topics': topics,
-                'hashtag_sentiment': hashtag_sentiment,
-                'top_users': top_users,
-                'sentiment_words': {
-                    'positive': sentiment_words.get('positive', []),
-                    'neutral': sentiment_words.get('neutral', []),
-                    'negative': sentiment_words.get('negative', [])
-                },
-                'sentiment_plot': sentiment_plot,
-                'word_cloud': word_cloud if word_cloud else None
-            }
-            
-            # Persiapkan data tweet untuk tampilan
-            tweets_for_display = []
-            for _, row in result_df.iterrows():
-                tweet = {
-                    'username': clean_for_json(row.get('username', '')),
-                    'content': clean_for_json(row.get('content', '')),
-                    'date': clean_for_json(row.get('date', '')),
-                    'likes': clean_for_json(row.get('likes', 0)),
-                    'retweets': clean_for_json(row.get('retweets', 0)),
-                    'replies': clean_for_json(row.get('replies', 0)),
-                    'predicted_sentiment': clean_for_json(row.get('predicted_sentiment', '')),
-                    'confidence': clean_for_json(row.get('confidence', 0))
+                
+                # Persiapkan data tweet untuk tampilan
+                tweets_for_display = []
+                for _, row in result_df.iterrows():
+                    tweet = {
+                        'username': clean_for_json(row.get('username', '')),
+                        'content': clean_for_json(row.get('content', '')),
+                        'date': clean_for_json(row.get('date', '')),
+                        'likes': clean_for_json(row.get('likes', 0)),
+                        'retweets': clean_for_json(row.get('retweets', 0)),
+                        'replies': clean_for_json(row.get('replies', 0)),
+                        'predicted_sentiment': clean_for_json(row.get('predicted_sentiment', '')),
+                        'confidence': clean_for_json(row.get('confidence', 0))
+                    }
+                    
+                    # Tambahkan field opsional jika ada
+                    for field in ['tweet_url', 'image_url', 'lang', 'location']:
+                        if field in row and not pd.isna(row[field]):
+                            tweet[field] = clean_for_json(row[field])
+                    
+                    tweets_for_display.append(tweet)
+                
+                # Tambahkan tweets ke hasil analisis
+                analysis_results['tweets'] = tweets_for_display
+                
+                # Simpan konteks analisis ke session untuk chatbot
+                session['analysis_context'] = {
+                    'title': title,
+                    'description': description,
+                    'total_tweets': total_tweets,
+                    'positive_count': positive_count,
+                    'neutral_count': neutral_count, 
+                    'negative_count': negative_count,
+                    'positive_percent': positive_percent,
+                    'neutral_percent': neutral_percent,
+                    'negative_percent': negative_percent,
+                    'top_hashtags': [h['tag'] for h in analysis_results['top_hashtags'][:5]],
+                    'top_topics': [t['topic'] for t in topics[:5]] if topics else []
                 }
                 
-                # Tambahkan field opsional jika ada
-                for field in ['tweet_url', 'image_url', 'lang', 'location']:
-                    if field in row and not pd.isna(row[field]):
-                        tweet[field] = clean_for_json(row[field])
+                # 6. Simpan analisis ke database
+                current_app.logger.info(f"Menyimpan hasil analisis ke database")
                 
-                tweets_for_display.append(tweet)
-            
-            # Tambahkan tweets ke hasil analisis
-            analysis_results['tweets'] = tweets_for_display
-            
-            # Simpan konteks analisis ke session untuk chatbot
-            session['analysis_context'] = {
-                'title': title,
-                'description': description,
-                'total_tweets': total_tweets,
-                'positive_count': positive_count,
-                'neutral_count': neutral_count, 
-                'negative_count': negative_count,
-                'positive_percent': positive_percent,
-                'neutral_percent': neutral_percent,
-                'negative_percent': negative_percent,
-                'top_hashtags': [h['tag'] for h in analysis_results['top_hashtags'][:5]],
-                'top_topics': [t['topic'] for t in topics[:5]]
-            }
-            
-            # 6. Simpan analisis ke database
-            current_app.logger.info(f"Menyimpan hasil analisis ke database")
-            
-            try:
-                # Buat objek analisis
-                new_analysis = Analysis(
-                    title=title,
-                    description=description,
-                    total_tweets=total_tweets,
-                    positive_count=positive_count,
-                    neutral_count=neutral_count,
-                    negative_count=negative_count,
-                    positive_percent=positive_percent,
-                    neutral_percent=neutral_percent,
-                    negative_percent=negative_percent,
-                    user_id=current_user.id
-                )
-                
-                # Tambahkan ke session database
-                db.session.add(new_analysis)
-                db.session.flush()  # Dapatkan ID tanpa commit
-                
-                # Simpan data detail analisis
-                analysis_data = AnalysisData(
-                    analysis_id=new_analysis.id,
-                    data_json=json.dumps(analysis_results),
-                    file_path=output_file
-                )
-                
-                # Tambahkan ke session database
-                db.session.add(analysis_data)
-                
-                # Commit perubahan ke database
-                db.session.commit()
-                current_app.logger.info(f"Analisis berhasil disimpan ke database dengan ID: {new_analysis.id}")
-                
-                # 7. Kembalikan respons JSON
-                return jsonify(analysis_results)
-                
+                try:
+                    # Buat objek analisis
+                    new_analysis = Analysis(
+                        title=title,
+                        description=description,
+                        total_tweets=total_tweets,
+                        positive_count=positive_count,
+                        neutral_count=neutral_count,
+                        negative_count=negative_count,
+                        positive_percent=positive_percent,
+                        neutral_percent=neutral_percent,
+                        negative_percent=negative_percent,
+                        user_id=current_user.id
+                    )
+                    
+                    # Tambahkan ke session database
+                    db.session.add(new_analysis)
+                    db.session.flush()  # Dapatkan ID tanpa commit
+                    
+                    # Simpan data detail analisis
+                    analysis_data = AnalysisData(
+                        analysis_id=new_analysis.id,
+                        data_json=json.dumps(analysis_results),
+                        file_path=output_file
+                    )
+                    
+                    # Tambahkan ke session database
+                    db.session.add(analysis_data)
+                    
+                    # Commit perubahan ke database
+                    db.session.commit()
+                    current_app.logger.info(f"Analisis berhasil disimpan ke database dengan ID: {new_analysis.id}")
+                    
+                    # 7. Kembalikan respons JSON
+                    return jsonify(analysis_results)
+                    
+                except Exception as e:
+                    # Rollback jika terjadi error
+                    db.session.rollback()
+                    current_app.logger.error(f"Error saat menyimpan ke database: {e}")
+                    raise
+                    
             except Exception as e:
-                # Rollback jika terjadi error
-                db.session.rollback()
-                current_app.logger.error(f"Error saat menyimpan ke database: {e}")
-                raise
+                # Tangani error selama proses
+                import traceback
+                error_details = traceback.format_exc()
+                current_app.logger.error(f"Error saat menganalisis file: {e}\n{error_details}")
                 
-        except Exception as e:
-            # Tangani error selama proses
-            import traceback
-            error_details = traceback.format_exc()
-            current_app.logger.error(f"Error saat menganalisis file: {e}\n{error_details}")
-            
-            # Rollback database jika diperlukan
-            try:
-                db.session.rollback()
-            except:
-                pass
-                
-            # Hapus file yang sudah diunggah jika terjadi error (opsional)
-            try:
-                if 'file_path' in locals() and os.path.exists(file_path):
-                    os.remove(file_path)
-                    current_app.logger.info(f"File dihapus karena terjadi error: {file_path}")
-            except Exception as e:
-                current_app.logger.error(f"Gagal menghapus file: {e}")
-                
-            return jsonify({'error': str(e)})
+                # Rollback database jika diperlukan
+                try:
+                    db.session.rollback()
+                except:
+                    pass
+                    
+                # Hapus file yang sudah diunggah jika terjadi error (opsional)
+                try:
+                    if 'file_path' in locals() and os.path.exists(file_path):
+                        os.remove(file_path)
+                        current_app.logger.info(f"File dihapus karena terjadi error: {file_path}")
+                except Exception as e:
+                    current_app.logger.error(f"Gagal menghapus file: {e}")
+                    
+                return jsonify({'error': str(e)})
+    
+    except Exception as e:
+        # Tangani semua exception yang mungkin terjadi
+        import traceback
+        error_details = traceback.format_exc()
+        current_app.logger.error(f"Error tak terduga: {e}\n{error_details}")
+        return jsonify({'error': f'Error tak terduga: {str(e)}'})
 
 @analysis_bp.route('/filter_tweets', methods=['POST'])
 @login_required

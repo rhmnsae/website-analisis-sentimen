@@ -66,6 +66,33 @@ document.addEventListener('DOMContentLoaded', function() {
     let positiveWordsChart = null;
     let neutralWordsChart = null;
     let negativeWordsChart = null;
+
+
+    // Variabel flag untuk mencegah multiple submission
+    let isSubmitting = false;
+    
+    // Variabel untuk retry dan backoff
+    const maxRetries = 3;
+    let retryCount = 0;
+    let retryTimeout = 2000; // ms
+    
+    if (analysisForm) {
+        analysisForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Cek apakah sedang dalam proses submit
+            if (isSubmitting) {
+                console.log('Form sedang diproses, mencegah submit ganda');
+                return false;
+            }
+            
+            // Reset retry count pada submit baru
+            retryCount = 0;
+            
+            // Mulai proses submit
+            submitFormWithRetry();
+        });
+    }
     
     // Initialize Charts.js with global defaults
     if (typeof Chart !== 'undefined') {
@@ -2044,6 +2071,121 @@ document.addEventListener('DOMContentLoaded', function() {
             alert.classList.remove('show');
             setTimeout(() => alert.remove(), 300);
         }, 5000);
+    }
+
+    function submitFormWithRetry() {
+        // Set flag submission
+        isSubmitting = true;
+        
+        // Show loading indicator and disable submit button
+        loadingIndicator.classList.remove('d-none');
+        submitBtn.disabled = true;
+        
+        // Ubah teks tombol
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Sedang Memproses...';
+        
+        // Get form data
+        const formData = new FormData();
+        formData.append('title', document.getElementById('title').value);
+        formData.append('description', document.getElementById('description')?.value || '');
+        
+        const csvFile = document.getElementById('csv-file').files[0];
+        if (!csvFile) {
+            showAlert('Silakan unggah file CSV terlebih dahulu.', 'warning');
+            resetSubmitButton();
+            return;
+        }
+        
+        formData.append('csv-file', csvFile);
+        
+        // Log information
+        console.log('Memulai analisis file...');
+        
+        // Send to server with explicit timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 menit timeout
+        
+        fetch('/upload', {
+            method: 'POST',
+            body: formData,
+            signal: controller.signal
+        })
+        .then(response => {
+            clearTimeout(timeoutId);
+            
+            if (response.status === 429) {
+                // Too Many Requests - implementasi retry dengan backoff
+                retryCount++;
+                if (retryCount <= maxRetries) {
+                    const waitTime = retryTimeout * Math.pow(2, retryCount - 1); // Exponential backoff
+                    
+                    showAlert(`Server sedang sibuk. Mencoba lagi dalam ${waitTime/1000} detik... (Percobaan ${retryCount}/${maxRetries})`, 'warning');
+                    
+                    // Update tombol
+                    submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Menunggu server (${waitTime/1000}s)...`;
+                    
+                    setTimeout(() => {
+                        // Coba lagi setelah backoff
+                        submitFormWithRetry();
+                    }, waitTime);
+                    
+                    return null; // Skip processing response
+                } else {
+                    // Gagal setelah beberapa kali retry
+                    throw new Error('Server sedang sibuk. Silakan coba lagi nanti.');
+                }
+            }
+            
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status} ${response.statusText}`);
+            }
+            
+            return response.json();
+        })
+        .then(data => {
+            if (!data) return; // Skip if null (during retry)
+            
+            // Reset flag
+            isSubmitting = false;
+            
+            // Hide loading indicator
+            loadingIndicator.classList.add('d-none');
+            
+            if (data.error) {
+                showAlert('Error: ' + data.error, 'danger');
+                resetSubmitButton();
+                return;
+            }
+            
+            // Menampilkan informasi sukses sebelum redirect
+            showAlert('Analisis selesai! Mengalihkan ke halaman hasil...', 'success');
+            
+            // Delay redirect untuk memungkinkan pesan dilihat
+            setTimeout(() => {
+                // Redirect to hasil-analisis page
+                window.location.href = '/hasil-analisis';
+            }, 1000);
+        })
+        .catch(error => {
+            console.error('Error during form submission:', error);
+            
+            // Reset flag
+            isSubmitting = false;
+            
+            // Show error message
+            loadingIndicator.classList.add('d-none');
+            showAlert('Error: ' + error.message, 'danger');
+            
+            // Reset submit button
+            resetSubmitButton();
+        });
+    }
+    
+    function resetSubmitButton() {
+        // Re-enable button with original text
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Mulai Analisis';
+        isSubmitting = false;
     }
     
     // Add support for example questions in chatbot.html
