@@ -417,6 +417,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const neutralCount = document.getElementById('neutral-count');
         const negativeCount = document.getElementById('negative-count');
         const topHashtags = document.getElementById('top-hashtags');
+        const mainTopics = document.getElementById('main-topics');
         
         if (!totalTweets || !positiveCount || !neutralCount || !negativeCount) {
             console.log("Elemen data belum ditemukan di DOM");
@@ -429,24 +430,77 @@ document.addEventListener('DOMContentLoaded', function() {
         const neutralValue = parseInt(neutralCount.textContent) || 0;
         const negativeValue = parseInt(negativeCount.textContent) || 0;
         
+        // Periksa status visualisasi
+        const wordCloudLoaded = checkWordCloudLoaded();
+        const chartsLoaded = checkChartsLoaded();
+        
         console.log("Memeriksa data: ", {
             total: totalValue,
             positive: positiveValue,
             neutral: neutralValue,
             negative: negativeValue,
-            hashtagsLoaded: topHashtags && topHashtags.children.length > 0
+            hashtagsLoaded: topHashtags && topHashtags.children.length > 0,
+            mainTopicsLoaded: mainTopics && mainTopics.children.length > 0,
+            wordCloudLoaded: wordCloudLoaded,
+            chartsLoaded: chartsLoaded
         });
         
         // Data dianggap sudah dimuat jika:
-        // 1. Total tweets lebih dari 0, atau
-        // 2. Setidaknya salah satu dari sentimen sudah diisi, atau
-        // 3. Hashtags sudah dimuat
-        return totalValue > 0 || 
-               positiveValue > 0 || 
-               neutralValue > 0 || 
-               negativeValue > 0 ||
-               (topHashtags && topHashtags.children.length > 0);
+        // 1. Total tweets lebih dari 0, DAN
+        // 2. Setidaknya salah satu dari sentimen sudah diisi dengan nilai valid, DAN
+        // 3. Hashtags atau topik sudah dimuat
+        const basicDataLoaded = totalValue > 0 && 
+                               (positiveValue > 0 || neutralValue > 0 || negativeValue > 0) &&
+                               ((topHashtags && topHashtags.children.length > 0) || 
+                                (mainTopics && mainTopics.children.length > 0));
+        
+        // Beritahu reload.js bahwa data sudah dimuat jika sebelumnya belum terinformasi
+        if (basicDataLoaded && window.notifyDataLoaded && !window.dataLoaded) {
+            console.log("Memberitahu reload.js bahwa data sudah dimuat");
+            window.notifyDataLoaded();
+        }
+        
+        // Untuk pengecekan yang lebih lengkap, kita perlu semua data dasar dimuat
+        return basicDataLoaded;
     }
+    
+
+    function checkWordCloudLoaded() {
+        const wordCloudContainer = document.getElementById('word-cloud-container');
+        if (!wordCloudContainer) return false;
+        
+        // Jika masih ada loading spinner, word cloud belum selesai
+        if (wordCloudContainer.querySelector('.spinner-border')) {
+            return false;
+        }
+        
+        // Jika ada konten SVG atau elemen kata, word cloud sudah dimuat
+        return !!wordCloudContainer.querySelector('svg') || 
+               wordCloudContainer.querySelector('.word') ||
+               !wordCloudContainer.querySelector('.text-muted');
+    }
+
+
+    // Fungsi untuk memeriksa apakah grafik sudah dimuat
+    function checkChartsLoaded() {
+        // Periksa beberapa container grafik
+        const containers = [
+            'sentiment-by-hashtag-chart',
+            'sentiment-by-location-chart',
+            'sentiment-by-language-chart'
+        ];
+        
+        // Minimal satu grafik harus dimuat
+        for (const id of containers) {
+            const container = document.getElementById(id);
+            if (container && container.querySelector('canvas') && !container.querySelector('.spinner-border')) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
     
     // Fungsi untuk menyembunyikan overlay loading
     function hideLoadingOverlay() {
@@ -455,7 +509,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Variabel untuk melacak status pemeriksaan
         let checkCount = 0;
-        const maxChecks = 10; // Maksimal 10 kali pemeriksaan (5 detik total dengan interval 500ms)
+        const maxChecks = 30; // Tingkatkan maksimal pemeriksaan menjadi 30 kali (15 detik total)
         
         // Cek rekursif dengan batas waktu yang ditingkatkan
         function checkDataAndHideOverlay() {
@@ -466,25 +520,55 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Jika data berhasil dimuat atau batas pemeriksaan tercapai, sembunyikan overlay
                 console.log(`Loading overlay dihapus: ${isDataLoaded() ? 'Data terdeteksi' : 'Batas waktu tercapai'} (Percobaan ke-${checkCount})`);
                 
+                // Jika data belum dimuat tapi batas waktu tercapai, tampilkan pesan berbeda
+                const message = isDataLoaded() ? 
+                    "Analisis berhasil dimuat!" : 
+                    "Beberapa data mungkin belum selesai dimuat, silakan tunggu...";
+                
                 // Tampilkan step terakhir
-                updateLoadingStatus(4, "Analisis berhasil dimuat!");
+                updateLoadingStatus(4, message);
+                
+                // Tunggu lebih lama jika data berhasil dimuat, untuk memastikan visualisasi muncul
+                const delayTime = isDataLoaded() ? 2000 : 500;
                 
                 // Tunggu sebentar lalu fade out
                 setTimeout(() => {
                     loadingOverlay.classList.add('fade-out');
                     setTimeout(() => {
                         loadingOverlay.style.display = 'none';
+                        
+                        // Jika data belum dimuat sepenuhnya, tampilkan pesan peringatan
+                        if (!isDataLoaded() && checkCount >= maxChecks) {
+                            showAlert('Beberapa data mungkin belum selesai dimuat. Jika visualisasi tidak muncul, silakan refresh halaman.', 'warning');
+                        }
                     }, 500);
-                }, 500);
+                }, delayTime);
+                
+                // Beritahu reload.js bahwa data sudah dimuat
+                if (window.notifyDataLoaded && !window.dataLoaded) {
+                    window.notifyDataLoaded();
+                }
             } else {
                 // Jika data belum dimuat dan belum mencapai batas pemeriksaan, periksa lagi
                 console.log(`Data belum terdeteksi, menunggu... (Percobaan ke-${checkCount})`);
+                
+                // Update status loading berdasarkan jumlah percobaan
+                if (checkCount <= 5) {
+                    updateLoadingStatus(1, "Mengunduh dan menyiapkan data...");
+                } else if (checkCount <= 15) {
+                    updateLoadingStatus(2, "Memproses data analisis sentimen...");
+                } else {
+                    updateLoadingStatus(3, "Menyiapkan visualisasi dan grafik...");
+                }
+                
                 setTimeout(checkDataAndHideOverlay, 500); // Cek setiap 500ms
             }
         }
         
-        // Mulai pemeriksaan
-        checkDataAndHideOverlay();
+        // Mulai pemeriksaan setelah jeda untuk memberi waktu DOM diperbarui
+        setTimeout(() => {
+            checkDataAndHideOverlay();
+        }, 1500); // Tunggu 1.5 detik sebelum mulai pemeriksaan
     }
     
     // Display tweets for current page
@@ -2543,9 +2627,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update status loading
         updateLoadingStatus(1, "Menginisialisasi dan menghubungkan ke server...");
         
-        // Tambah timeout yang lebih panjang (2 menit)
+        // Tambah timeout yang lebih panjang (3 menit)
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 120000);
+        const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 menit
         
         fetch('/api/analysis-data', {
             method: 'GET',
@@ -2577,6 +2661,11 @@ document.addEventListener('DOMContentLoaded', function() {
             analysisResults = data;
             allTweets = data.tweets || [];
             
+            // Tambahkan log tambahan untuk debugging
+            console.log("Jumlah tweet dimuat:", allTweets.length);
+            console.log("Data hashtag:", data.top_hashtags ? data.top_hashtags.length : 0);
+            console.log("Data topik:", data.topics ? data.topics.length : 0);
+            
             // Update UI dengan hasil analisis
             updateAnalysisResults(data);
             
@@ -2589,11 +2678,16 @@ document.addEventListener('DOMContentLoaded', function() {
             // Buat word cloud
             createImprovedWordCloud(data);
             
-            // Beri waktu singkat untuk DOM diperbarui sebelum memeriksa data
+            // Beri waktu untuk DOM diperbarui sebelum memeriksa data
             setTimeout(() => {
+                // Beritahu bahwa data sudah dimuat jika fungsi tersedia
+                if (window.notifyDataLoaded && !window.dataLoaded) {
+                    window.notifyDataLoaded();
+                }
+                
                 // Cek status dan sembunyikan loading overlay
                 hideLoadingOverlay();
-            }, 1000);
+            }, 2500);
         })
         .catch(error => {
             clearTimeout(timeoutId);
