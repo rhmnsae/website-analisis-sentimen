@@ -1398,4 +1398,17 @@ footer h5 svg {
 .delay-9 { animation-delay: 0.9s !important; }
 .delay-10 { animation-delay: 1s !important; }
 
+.fade-out {
+    animation: fadeOut 0.5s forwards;
+}
 
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; visibility: hidden; }
+}
+
+/* Animasi loading step untuk progress bar dan status teks */
+.progress-step-1 { width: 25% !important; }
+.progress-step-2 { width: 50% !important; }
+.progress-step-3 { width: 75% !important; }
+.progress-step-4 { width: 100% !important; }

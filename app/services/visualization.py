@@ -26,14 +26,16 @@ def create_sentiment_plot(df):
         'Negatif': '#000000'   # Abu-abu gelap
     }
     
-    # Buat plot dengan warna yang sesuai
+    # Perbaikan untuk mengatasi FutureWarning: menggunakan hue dan legend=False
     ax = sns.countplot(
         data=df, 
-        x='predicted_sentiment', 
+        x='predicted_sentiment',
+        hue='predicted_sentiment',
         palette=color_map,
         order=sentiment_order,
         edgecolor='black',
         alpha=0.9,
+        legend=False
     )
     
     # Hapus bingkai kecuali di bagian bawah

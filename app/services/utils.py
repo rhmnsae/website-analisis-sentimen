@@ -1,4 +1,3 @@
-
 import os
 import time
 import threading
@@ -69,10 +68,13 @@ class UserLock:
             if self.lock_file and os.path.exists(self.lock_file):
                 os.remove(self.lock_file)
                 logger.info(f"Lock berhasil dilepaskan untuk user {self.user_id}")
+                return True
             else:
                 logger.warning(f"Tidak ada lock file untuk dilepaskan untuk user {self.user_id}")
+                return False
         except Exception as e:
             logger.error(f"Error saat release lock: {e}")
+            return False
     
     def force_cleanup(self):
         """Paksa membersihkan lock apapun yang mungkin tersisa"""
@@ -115,23 +117,30 @@ def acquire_user_lock(user_id, timeout=30):
         True jika berhasil mendapatkan lock, False jika gagal
     """
     with _global_lock:
-        # Cek apakah user sudah memegang lock
-        if user_id in _user_locks:
-            # Cek apakah lock sudah kadaluarsa (lebih dari 5 menit)
-            lock_obj = _user_locks[user_id]
-            current_time = datetime.datetime.now()
-            time_diff = (current_time - lock_obj.lock_time).total_seconds()
+        # Coba membersihkan lock terlebih dahulu jika ada
+        # Ini membantu mengatasi skenario dimana lock sebelumnya tidak dilepaskan dengan benar
+        lock_obj = UserLock(user_id)
+        lock_file = lock_obj.lock_file
+        
+        # Jika file lock ada, cek apakah sudah kadaluarsa
+        if os.path.exists(lock_file):
+            file_mtime = os.path.getmtime(lock_file)
+            current_time = time.time()
             
-            # Jika lock lebih dari 5 menit, lepaskan dan buat baru
-            if time_diff > 300:  # 5 menit
-                logger.info(f"Lock untuk user {user_id} sudah kadaluarsa, melepaskan lock")
-                release_user_lock(user_id)
+            # Jika lock lebih dari 5 menit, anggap kadaluarsa dan hapus
+            if current_time - file_mtime > 300:  # 5 menit
+                try:
+                    os.remove(lock_file)
+                    logger.info(f"Lock kadaluarsa untuk user {user_id} dihapus otomatis")
+                except Exception as e:
+                    logger.error(f"Gagal menghapus lock kadaluarsa: {e}")
+                    # Return True karena kita menganggap lock sudah kadaluarsa
+                    # meskipun gagal menghapus file
+                    return True
             else:
+                # Lock masih aktif, kemungkinan proses lain sedang berjalan
                 logger.warning(f"User {user_id} sudah memiliki lock aktif")
                 return False
-        
-        # Buat lock baru
-        lock_obj = UserLock(user_id)
         
         # Coba dapatkan lock dengan retry exponential backoff
         start_time = time.time()
@@ -161,14 +170,16 @@ def release_user_lock(user_id):
     """
     with _global_lock:
         if user_id in _user_locks:
-            _user_locks[user_id].release()
+            success = _user_locks[user_id].release()
             del _user_locks[user_id]
-            logger.info(f"Lock untuk user {user_id} berhasil dilepaskan")
+            logger.info(f"Lock untuk user {user_id} berhasil dilepaskan: {success}")
+            return success
         else:
             # Coba bersihkan file lock jika ada, meskipun tidak ada entry di dictionary
             lock_obj = UserLock(user_id)
-            lock_obj.force_cleanup()
-            logger.warning(f"Tidak ada lock di memory untuk user {user_id}, mencoba bersihkan file lock")
+            success = lock_obj.force_cleanup()
+            logger.warning(f"Tidak ada lock di memory untuk user {user_id}, mencoba bersihkan file lock: {success}")
+            return success
 
 def check_force_cleanup_parameter(user_id):
     """Fungsi untuk mengecek parameter force_cleanup di URL"""
@@ -177,9 +188,9 @@ def check_force_cleanup_parameter(user_id):
         force_cleanup = request.args.get('force_cleanup', 'false').lower() == 'true'
         if force_cleanup:
             lock_obj = UserLock(user_id)
-            lock_obj.force_cleanup()
-            logger.info(f"Lock untuk user {user_id} dibersihkan secara paksa dari URL parameter")
-            return True
+            success = lock_obj.force_cleanup()
+            logger.info(f"Lock untuk user {user_id} dibersihkan secara paksa dari URL parameter: {success}")
+            return success
         return False
     except:
         return False
@@ -222,6 +233,8 @@ class UserLockRequired:
             return self.f(*args, **kwargs)
         except Exception as e:
             current_app.logger.error(f"Error saat menjalankan fungsi: {e}")
+            # Pastikan lock dilepaskan sebelum meneruskan exception
+            release_user_lock(user_id)
             raise
         finally:
             # Pastikan lock selalu dilepaskan setelah selesai

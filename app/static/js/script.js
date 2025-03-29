@@ -75,6 +75,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const maxRetries = 3;
     let retryCount = 0;
     let retryTimeout = 2000; // ms
+
+    if (window.location.pathname === '/hasil-analisis') {
+        // Fetch analysis data dengan retry
+        fetchAnalysisDataWithRetry();
+    }
     
     if (analysisForm) {
         analysisForm.addEventListener('submit', function(e) {
@@ -1560,7 +1565,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     row.className = 'animate-fade-in';
                     
                     const sentimentClass = user.dominant_sentiment === 'Positif' ? 'sentiment-positive' : 
-                                        user.dominant_sentiment === 'Netral' ? 'sentiment-neutral' : 'sentiment-negative';
+                                          user.dominant_sentiment === 'Netral' ? 'sentiment-neutral' : 'sentiment-negative';
                     
                     row.innerHTML = `
                         <td><a href="https://twitter.com/${user.username}" target="_blank">@${user.username}</a></td>
@@ -1648,31 +1653,47 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Initialize all charts
         if (data.hashtag_sentiment) {
-            createSentimentByHashtagChart(data.hashtag_sentiment);
+            try {
+                createSentimentByHashtagChart(data.hashtag_sentiment);
+            } catch (e) {
+                console.error("Error creating hashtag sentiment chart:", e);
+            }
         }
         
         if (data.tweets) {
-            createSentimentByLocationChart(data.tweets);
-            createSentimentByLanguageChart(data.tweets);
+            try {
+                createSentimentByLocationChart(data.tweets);
+                createSentimentByLanguageChart(data.tweets);
+            } catch (e) {
+                console.error("Error creating location/language charts:", e);
+            }
         }
         
         if (data.sentiment_words) {
             // Create top words charts for each sentiment
-            if (data.sentiment_words.positive) {
-                createWordFrequencyChart('positive-words-chart', data.sentiment_words.positive, 'Kata Umum dalam Sentimen Positif', '#ffffff');
-            }
-            
-            if (data.sentiment_words.neutral) {
-                createWordFrequencyChart('neutral-words-chart', data.sentiment_words.neutral, 'Kata Umum dalam Sentimen Netral', '#9e9e9e');
-            }
-            
-            if (data.sentiment_words.negative) {
-                createWordFrequencyChart('negative-words-chart', data.sentiment_words.negative, 'Kata Umum dalam Sentimen Negatif', '#000000');
+            try {
+                if (data.sentiment_words.positive) {
+                    createWordFrequencyChart('positive-words-chart', data.sentiment_words.positive, 'Kata Umum dalam Sentimen Positif', '#ffffff');
+                }
+                
+                if (data.sentiment_words.neutral) {
+                    createWordFrequencyChart('neutral-words-chart', data.sentiment_words.neutral, 'Kata Umum dalam Sentimen Netral', '#9e9e9e');
+                }
+                
+                if (data.sentiment_words.negative) {
+                    createWordFrequencyChart('negative-words-chart', data.sentiment_words.negative, 'Kata Umum dalam Sentimen Negatif', '#000000');
+                }
+            } catch (e) {
+                console.error("Error creating word frequency charts:", e);
             }
         }
         
         // Update word cloud
-        createImprovedWordCloud(data);
+        try {
+            createImprovedWordCloud(data);
+        } catch (e) {
+            console.error("Error creating word cloud:", e);
+        }
         
         // Update sentiment plot
         const sentimentPlot = document.getElementById('sentiment-plot');
@@ -1681,6 +1702,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 sentimentPlot.src = 'data:image/png;base64,' + data.sentiment_plot;
                 sentimentPlot.classList.remove('d-none');
                 sentimentPlot.classList.add('animate-fade-in');
+                
+                // Hapus loading indicator jika ada
+                const loadingEl = document.querySelector('.sentiment-plot-loading');
+                if (loadingEl) {
+                    loadingEl.style.display = 'none';
+                }
             } else {
                 sentimentPlot.classList.add('d-none');
             }
@@ -2172,6 +2199,252 @@ document.addEventListener('DOMContentLoaded', function() {
         return alertId;
     }
 
+    // Fungsi untuk penanganan fetch dengan retry dan timeout
+    function fetchWithRetry(url, options, maxRetries = 3, timeout = 90000) {
+        // Tampilkan animasi loading 
+        updateLoadingStatus(1, "Mengunduh dan menyiapkan data...");
+        
+        return new Promise((resolve, reject) => {
+            // Tambahkan timeout yang lebih panjang
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeout);
+            
+            const makeRequest = (retries) => {
+                const fetchOptions = {
+                    ...options,
+                    signal: controller.signal
+                };
+                
+                fetch(url, fetchOptions)
+                    .then(response => {
+                        clearTimeout(timeoutId); // Clear timeout if successful
+                        
+                        if (response.status === 429) {
+                            // Too Many Requests - implementasi retry dengan backoff
+                            return response.json().then(errorData => {
+                                const retryDelay = Math.min(2000 * Math.pow(2, maxRetries - retries), 10000);
+                                updateLoadingStatus(Math.round((maxRetries - retries + 1) / maxRetries * 50), 
+                                                `Server sibuk, mencoba lagi dalam ${Math.round(retryDelay/1000)} detik...`);
+                                
+                                if (retries <= 0) {
+                                    throw new Error(`Terlalu banyak permintaan. Silakan coba lagi nanti.`);
+                                }
+                                
+                                return new Promise(resolve => {
+                                    setTimeout(() => resolve(makeRequest(retries - 1)), retryDelay);
+                                });
+                            });
+                        }
+                        
+                        if (!response.ok) {
+                            throw new Error(`Server error: ${response.status} ${response.statusText}`);
+                        }
+                        
+                        updateLoadingStatus(3, "Memproses data yang diterima...");
+                        return response.json();
+                    })
+                    .then(data => {
+                        updateLoadingStatus(4, "Menampilkan hasil analisis...");
+                        setTimeout(() => {
+                            resolve(data);
+                        }, 500); // Delay kecil sebelum menyelesaikan loading
+                    })
+                    .catch(error => {
+                        clearTimeout(timeoutId);
+                        
+                        if (error.name === 'AbortError') {
+                            error = new Error('Permintaan timeout. Server mungkin sibuk, silakan coba lagi.');
+                        }
+                        
+                        if (error.message && error.message.includes('ChunkedEncodingError')) {
+                            error = new Error('Koneksi terputus. Silakan periksa koneksi internet Anda dan coba lagi.');
+                        }
+                        
+                        if (retries <= 0) {
+                            reject(error);
+                            return;
+                        }
+                        
+                        // Exponential backoff
+                        const waitTime = 2000 * Math.pow(2, maxRetries - retries);
+                        console.log(`Retry attempt ${maxRetries - retries + 1}/${maxRetries} after ${waitTime}ms: ${error.message}`);
+                        updateLoadingStatus(2, `Mencoba lagi (${maxRetries - retries + 1}/${maxRetries})...`);
+                        
+                        setTimeout(() => {
+                            makeRequest(retries - 1);
+                        }, waitTime);
+                    });
+            };
+            
+            makeRequest(maxRetries);
+        });
+    }
+
+    // Fungsi untuk update loading status
+    function updateLoadingStatus(step, message) {
+        const loadingProgress = document.getElementById('loading-progress');
+        const loadingStatus = document.getElementById('loading-status');
+        
+        if (loadingProgress) {
+            loadingProgress.classList.remove('progress-step-1', 'progress-step-2', 'progress-step-3', 'progress-step-4');
+            loadingProgress.classList.add(`progress-step-${step}`);
+        }
+        
+        if (loadingStatus) {
+            loadingStatus.textContent = message;
+        }
+    }
+
+    // Fungsi untuk menampilkan overlay loading
+    function showLoadingOverlay(message = "Memuat data analisis...") {
+        const existingOverlay = document.getElementById('loading-overlay');
+        
+        if (existingOverlay) {
+            // Update pesan jika overlay sudah ada
+            const statusElement = document.getElementById('loading-status');
+            if (statusElement) statusElement.textContent = message;
+            
+            existingOverlay.classList.remove('fade-out');
+            existingOverlay.style.display = 'flex';
+            
+            // Reset progress bar
+            const loadingProgress = document.getElementById('loading-progress');
+            if (loadingProgress) {
+                loadingProgress.classList.remove('progress-step-1', 'progress-step-2', 'progress-step-3', 'progress-step-4');
+                loadingProgress.style.width = '0%';
+            }
+        } else {
+            // Buat overlay baru jika belum ada
+            const overlay = document.createElement('div');
+            overlay.id = 'loading-overlay';
+            overlay.className = 'position-absolute top-0 left-0 w-100 h-100 d-flex justify-content-center align-items-center bg-light bg-opacity-75';
+            overlay.style.zIndex = '1000';
+            
+            overlay.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-dark mb-3" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h5 class="mb-2">Memuat Data</h5>
+                    <p class="text-muted">${message}</p>
+                    <div class="progress mt-3" style="height: 8px; width: 250px;">
+                        <div id="loading-progress" class="progress-bar progress-bar-striped progress-bar-animated bg-dark" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <small class="text-muted mt-2" id="loading-status">Mengunduh dan menyiapkan data...</small>
+                </div>
+            `;
+            
+            const container = document.querySelector('.card-body');
+            if (container) {
+                container.style.position = 'relative';
+                container.appendChild(overlay);
+            }
+        }
+    }
+
+    // Fungsi untuk menyembunyikan overlay loading
+    function hideLoadingOverlay() {
+        const loadingOverlay = document.getElementById('loading-overlay');
+        if (loadingOverlay) {
+            loadingOverlay.classList.add('fade-out');
+            setTimeout(() => {
+                loadingOverlay.style.display = 'none';
+            }, 500);
+        }
+    }
+
+    // Fungsi untuk menampilkan pesan error
+    function showErrorMessage(message) {
+        const errorContainer = document.createElement('div');
+        errorContainer.className = 'alert alert-danger animate-fade-in';
+        errorContainer.innerHTML = `
+            <div class="d-flex align-items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-3"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <div>
+                    <h5 class="mb-1">Terjadi Kesalahan</h5>
+                    <p class="mb-2">${message}</p>
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-outline-danger me-2" onclick="fetchAnalysisDataWithRetry()">Coba Lagi</button>
+                        <a href="/input-data" class="btn btn-sm btn-dark">Kembali ke Input Data</a>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Tampilkan error di berbagai tab untuk memastikan user melihatnya
+        const contentContainers = [
+            document.getElementById('dashboard-content'),
+            document.getElementById('tweets-content'),
+            document.getElementById('topics-content'),
+            document.getElementById('charts-content')
+        ];
+        
+        contentContainers.forEach(container => {
+            if (container) {
+                container.innerHTML = '';
+                container.appendChild(errorContainer.cloneNode(true));
+            }
+        });
+        
+        // Tambahkan juga sebagai alert di bagian atas
+        const alertContainer = document.getElementById('alert-container');
+        if (alertContainer) {
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-danger alert-dismissible fade show animate-fade-in';
+            alert.role = 'alert';
+            alert.innerHTML = `
+                <strong>Error!</strong> ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            
+            alertContainer.appendChild(alert);
+        }
+    }
+
+    // Fungsi untuk mencoba fetch analysis data dengan retry
+    function fetchAnalysisDataWithRetry() {
+        showLoadingOverlay("Memuat hasil analisis...");
+        
+        fetchWithRetry('/api/analysis-data', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }, 5, 120000) // 5 retries, 2 menit timeout
+        .then(data => {
+            // Sukses mendapatkan data
+            if (data.error) {
+                hideLoadingOverlay();
+                showErrorMessage(data.error);
+                return;
+            }
+            
+            // Update global variables
+            analysisResults = data;
+            allTweets = data.tweets || [];
+            
+            // Update UI with analysis results
+            updateAnalysisResults(data);
+            
+            // Initialize pagination
+            initializePagination();
+            
+            // Generate topics automatically
+            generateTopics(data);
+            
+            // Create word cloud
+            createImprovedWordCloud(data);
+            
+            // Sembunyikan loading setelah semua diproses
+            hideLoadingOverlay();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            hideLoadingOverlay();
+            showErrorMessage(error.message || 'Gagal memuat data analisis.');
+        });
+    }
+
     function submitFormWithRetry() {
         // Set flag submission
         isSubmitting = true;
@@ -2206,9 +2479,9 @@ document.addEventListener('DOMContentLoaded', function() {
             uploadUrl += '?force_cleanup=true';
         }
         
-        // Send to server with explicit timeout
+        // Send to server with increased timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 menit timeout (ditambah)
+        const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 menit timeout (ditambah)
         
         fetch(uploadUrl, {
             method: 'POST',
@@ -2226,10 +2499,26 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Khusus untuk lock error, tunda lebih lama
                     let waitTime = retryTimeout * Math.pow(2, retryCount - 1); // Exponential backoff
                     
-                    // Jika ada kode LOCK_EXISTS, beri retryTimeout lebih lama
+                    // Jika ada kode LOCK_EXISTS, beri retryTimeout lebih lama dan tampilkan opsi untuk clean lock
                     if (errorData.code === 'LOCK_EXISTS') {
                         console.log("Lock error terdeteksi, menunggu lebih lama");
                         waitTime = Math.max(waitTime, 8000); // Minimal 8 detik untuk lock error
+                        
+                        // Tampilkan pesan dengan opsi clean lock
+                        submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Proses sebelumnya masih berjalan`;
+                        
+                        // Tambahkan tombol clean lock
+                        const cleanLockBtn = document.createElement('button');
+                        cleanLockBtn.className = 'btn btn-sm btn-warning ms-2';
+                        cleanLockBtn.innerHTML = 'Bersihkan Lock';
+                        cleanLockBtn.onclick = forceCleanupLock;
+                        
+                        // Tambahkan setelah tombol submit
+                        submitBtn.parentNode.appendChild(cleanLockBtn);
+                        
+                        showAlert(`Proses sebelumnya masih berjalan. Harap tunggu beberapa saat atau gunakan tombol "Bersihkan Lock" untuk mengatasi masalah.`, 'warning');
+                        loadingIndicator.classList.add('d-none');
+                        return null;
                     }
                     
                     if (retryCount <= maxRetries) {
@@ -2246,7 +2535,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         return null; // Skip processing response
                     } else {
                         // Gagal setelah beberapa kali retry
-                        throw new Error('Server sedang sibuk. Silakan coba lagi nanti.');
+                        throw new Error('Server sedang sibuk. Silakan coba lagi nanti atau bersihkan lock.');
                     }
                 });
             }
@@ -2290,7 +2579,14 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Show error message
             loadingIndicator.classList.add('d-none');
-            showAlert('Error: ' + error.message, 'danger');
+            
+            if (error.name === 'AbortError') {
+                showAlert('Error: Waktu permintaan habis. File mungkin terlalu besar atau server sedang sibuk.', 'danger');
+            } else if (error.toString().includes('ChunkedEncodingError')) {
+                showAlert('Error: Koneksi terputus. Silakan periksa koneksi internet Anda dan coba lagi.', 'danger');
+            } else {
+                showAlert('Error: ' + error.message, 'danger');
+            }
             
             // Reset submit button
             resetSubmitButton();
@@ -2299,14 +2595,22 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Tambahkan fungsi untuk membersihkan lock melalui UI jika diperlukan
     function forceCleanupLock() {
-        fetch('/upload?force_cleanup=true', {
+        fetch('/clean-lock', {
             method: 'GET'
         })
-        .then(response => {
-            if (response.ok) {
-                showAlert('Lock berhasil dibersihkan. Silakan coba lagi.', 'success');
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showAlert(data.message, 'success');
+                
+                // Hapus tombol clean lock jika ada
+                const cleanLockBtn = document.querySelector('.btn-warning');
+                if (cleanLockBtn) cleanLockBtn.remove();
+                
+                // Reset submit button setelah delay singkat
+                setTimeout(resetSubmitButton, 1000);
             } else {
-                showAlert('Gagal membersihkan lock.', 'danger');
+                showAlert(data.message || 'Gagal membersihkan lock.', 'danger');
             }
         })
         .catch(error => {
