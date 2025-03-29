@@ -6,15 +6,14 @@
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
         <div>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
             <h2 class="card-title">{{ analysis.title }}</h2>
-        </div>
-        <div>
             <a href="{{ url_for('history.index') }}" class="btn btn-sm btn-outline-dark">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
                 Kembali ke Riwayat
             </a>
-            <a href="{{ url_for('analysis.download_report') }}" id="download-report-btn" class="download-report-btn">
+        </div>
+        <div>
+            <a href="{{ url_for('analysis.download_report') }}?id={{ analysis.id }}" id="download-report-btn" class="download-report-btn">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                     <polyline points="7 10 12 15 17 10"></polyline>
@@ -28,11 +27,6 @@
         <div class="row mb-3">
             <div class="col-md-6">
                 <small class="text-muted">Dibuat pada: {{ analysis.created_at.strftime('%d %B %Y, %H:%M') }}</small>
-            </div>
-            <div class="col-md-6 text-end">
-                <span class="badge bg-success me-1">Positif: {{ analysis.positive_percent }}%</span>
-                <span class="badge bg-warning me-1">Netral: {{ analysis.neutral_percent }}%</span>
-                <span class="badge bg-danger">Negatif: {{ analysis.negative_percent }}%</span>
             </div>
         </div>
         
@@ -127,6 +121,12 @@
                 
                 <div id="tweet-container" class="tweet-list">
                     <!-- Akan diisi secara dinamis -->
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-dark" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Memuat daftar tweet...</p>
+                    </div>
                 </div>
                 
                 <div id="pagination-container" class="mt-3">
@@ -153,6 +153,14 @@
                                 </thead>
                                 <tbody id="topik-utama">
                                     <!-- Topics populate with JavaScript -->
+                                    <tr>
+                                        <td colspan="2" class="text-center">
+                                            <div class="spinner-border spinner-border-sm text-dark" role="status">
+                                                <span class="visually-hidden">Loading...</span>
+                                            </div>
+                                            <span class="ms-2">Memuat data...</span>
+                                        </td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -171,6 +179,10 @@
                             </h5>
                             <div class="d-flex flex-wrap gap-2" id="all-hashtags">
                                 <!-- Hashtags populate with JavaScript -->
+                                <div class="spinner-border spinner-border-sm text-dark" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <span class="ms-2">Memuat data...</span>
                             </div>
                         </div>
                     </div>
@@ -194,6 +206,14 @@
                             </thead>
                             <tbody id="hashtag-sentiment">
                                 <!-- Sentiment data populate with JavaScript -->
+                                <tr>
+                                    <td colspan="5" class="text-center">
+                                        <div class="spinner-border spinner-border-sm text-dark" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                        <span class="ms-2">Memuat data...</span>
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -207,7 +227,13 @@
                         Distribusi Sentimen
                     </h5>
                     <div class="chart-container text-center">
-                        <img id="sentiment-plot" src="data:image/png;base64,{{ data.sentiment_plot }}" alt="Grafik Distribusi Sentimen" class="img-fluid">
+                        <img id="sentiment-plot" src="" alt="Grafik Distribusi Sentimen" class="img-fluid d-none">
+                        <div class="text-center py-4 sentiment-plot-loading">
+                            <div class="spinner-border text-dark" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Memuat visualisasi...</p>
+                        </div>
                     </div>
                 </div>
                 
@@ -221,7 +247,14 @@
                         Sentimen Berdasarkan Hashtag
                     </h5>
                     <div class="chart-container">
-                        <div id="sentiment-by-hashtag-chart"></div>
+                        <div id="sentiment-by-hashtag-chart">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-dark" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Memuat visualisasi...</p>
+                            </div>
+                        </div>
                     </div>
                 </div>   
                 
@@ -232,7 +265,14 @@
                             Sentimen Berdasarkan Lokasi (Top 5)
                         </h5>
                         <div class="chart-container">
-                            <div id="sentiment-by-location-chart"></div>
+                            <div id="sentiment-by-location-chart">
+                                <div class="text-center py-4">
+                                    <div class="spinner-border text-dark" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2">Memuat visualisasi...</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -241,7 +281,14 @@
                             Sentimen Berdasarkan Bahasa (Top 5)
                         </h5>
                         <div class="chart-container">
-                            <div id="sentiment-by-language-chart"></div>
+                            <div id="sentiment-by-language-chart">
+                                <div class="text-center py-4">
+                                    <div class="spinner-border text-dark" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2">Memuat visualisasi...</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -252,6 +299,12 @@
                     <h5 class="section-title word-cloud-title">Word Cloud</h5>
                     <div class="word-cloud-container" id="word-cloud-container">
                         <!-- Word cloud will be rendered here -->
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-dark" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Memuat word cloud...</p>
+                        </div>
                     </div>
                 </div>
                 
@@ -263,6 +316,12 @@
                         </h5>
                         <div class="chart-container" id="positive-words-chart">
                             <!-- Chart will be rendered here -->
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-dark" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Memuat analisis kata...</p>
+                            </div>
                         </div>
                     </div>
                     
@@ -273,6 +332,12 @@
                         </h5>
                         <div class="chart-container" id="neutral-words-chart">
                             <!-- Chart will be rendered here -->
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-dark" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Memuat analisis kata...</p>
+                            </div>
                         </div>
                     </div>
                     
@@ -283,6 +348,12 @@
                         </h5>
                         <div class="chart-container" id="negative-words-chart">
                             <!-- Chart will be rendered here -->
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-dark" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Memuat analisis kata...</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -304,10 +375,37 @@
     const dataScript = document.getElementById('analysis-data');
     const analysisResults = dataScript ? JSON.parse(dataScript.textContent) : null;
     
+    // Define global variables for tweet handling
+    let allTweets = [];
+    let currentPage = 1;
+    let tweetsPerPage = 10;
+    let filteredTweets = [];
+    let searchQuery = '';
+    
+    // Chart instances to allow for updates
+    let sentimentByHashtagChart = null;
+    let sentimentByLocationChart = null;
+    let sentimentByLanguageChart = null;
+    let positiveWordsChart = null;
+    let neutralWordsChart = null;
+    let negativeWordsChart = null;
+
     // Debug: Cek apakah data berhasil dimuat
     console.log("Analysis data loaded:", analysisResults);
 
+    // Fungsi untuk mengambil data analisis dari API
     function loadAnalysisData() {
+        // Tampilkan loading indicator
+        const loadingIndicator = document.createElement('div');
+        loadingIndicator.className = 'text-center my-4';
+        loadingIndicator.innerHTML = `
+            <div class="spinner-border text-dark" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Memuat data analisis...</p>
+        `;
+        document.querySelector('.card-body').prepend(loadingIndicator);
+        
         // Ambil ID analisis dari URL
         const urlParts = window.location.pathname.split('/');
         const analysisId = urlParts[urlParts.length - 1];
@@ -323,77 +421,1581 @@
             .then(data => {
                 console.log("Successfully loaded analysis data:", data);
                 
+                // Hapus loading indicator
+                if (loadingIndicator) {
+                    loadingIndicator.remove();
+                }
+                
+                // Simpan tweet data untuk digunakan nanti
+                if (data.tweets) {
+                    allTweets = data.tweets;
+                    filteredTweets = [...allTweets];
+                }
+                
+                // Update title placeholder dengan judul analisis
+                const titlePlaceholder = document.getElementById('title-placeholder');
+                if (titlePlaceholder) {
+                    titlePlaceholder.textContent = data.title || "{{ analysis.title }}";
+                }
+                
                 // Update UI dengan data yang dimuat
-                updateAnalysisResults(data);
-                
-                // Initialize pagination
-                initializePagination();
-                
-                // Generate topics untuk chatbot
-                generateTopics(data);
-                
-                // Buat word cloud
-                createImprovedWordCloud(data);
+                updateUIWithAnalysisData(data);
             })
             .catch(error => {
                 console.error('Error fetching analysis data:', error);
-                alert('Gagal memuat data analisis. Silakan refresh halaman.');
+                
+                // Hapus loading indicator
+                if (loadingIndicator) {
+                    loadingIndicator.remove();
+                }
+                
+                // Tampilkan pesan error
+                const errorAlert = document.createElement('div');
+                errorAlert.className = 'alert alert-danger';
+                errorAlert.textContent = 'Gagal memuat data analisis. Silakan refresh halaman.';
+                document.querySelector('.card-body').prepend(errorAlert);
             });
     }
 
-    // Panggil fungsi ini sebagai alternatif jika data tidak tersedia via script tag
-    document.addEventListener('DOMContentLoaded', function() {
-        if (!analysisResults) {
-            console.log("No data found in script tag, trying to load via API...");
-            loadAnalysisData();
+    // Fungsi untuk update UI dengan data analisis
+    function updateUIWithAnalysisData(data) {
+        // Update counts dan persentase
+        document.getElementById('total-tweets').textContent = data.total_tweets || "{{ analysis.total_tweets }}";
+        document.getElementById('positive-count').textContent = data.positive_count || "{{ analysis.positive_count }}";
+        document.getElementById('neutral-count').textContent = data.neutral_count || "{{ analysis.neutral_count }}";
+        document.getElementById('negative-count').textContent = data.negative_count || "{{ analysis.negative_count }}";
+        
+        document.getElementById('positive-percent').textContent = (data.positive_percent || "{{ analysis.positive_percent }}") + "%";
+        document.getElementById('neutral-percent').textContent = (data.neutral_percent || "{{ analysis.neutral_percent }}") + "%";
+        document.getElementById('negative-percent').textContent = (data.negative_percent || "{{ analysis.negative_percent }}") + "%";
+        
+        // Update progress bar
+        const positiveSegment = document.getElementById('positive-segment');
+        const neutralSegment = document.getElementById('neutral-segment');
+        const negativeSegment = document.getElementById('negative-segment');
+        
+        if (positiveSegment && neutralSegment && negativeSegment) {
+            positiveSegment.style.width = (data.positive_percent || "{{ analysis.positive_percent }}") + "%";
+            positiveSegment.textContent = (data.positive_percent || "{{ analysis.positive_percent }}") + "%";
+            
+            neutralSegment.style.width = (data.neutral_percent || "{{ analysis.neutral_percent }}") + "%";
+            neutralSegment.textContent = (data.neutral_percent || "{{ analysis.neutral_percent }}") + "%";
+            
+            negativeSegment.style.width = (data.negative_percent || "{{ analysis.negative_percent }}") + "%";
+            negativeSegment.textContent = (data.negative_percent || "{{ analysis.negative_percent }}") + "%";
         }
-    });
-    
-    // When the document is ready, update the UI with the data
-    document.addEventListener('DOMContentLoaded', function() {
-        // Langsung update elemen-elemen static juga secara manual
-        if (analysisResults) {
-            // Update jumlah dan persentase statis
-            document.getElementById('total-tweets').textContent = "{{ analysis.total_tweets }}";
-            document.getElementById('positive-count').textContent = "{{ analysis.positive_count }}";
-            document.getElementById('neutral-count').textContent = "{{ analysis.neutral_count }}";
-            document.getElementById('negative-count').textContent = "{{ analysis.negative_count }}";
-            
-            document.getElementById('positive-percent').textContent = "{{ analysis.positive_percent }}%";
-            document.getElementById('neutral-percent').textContent = "{{ analysis.neutral_percent }}%";
-            document.getElementById('negative-percent').textContent = "{{ analysis.negative_percent }}%";
-            
-            // Update progress bar jika ada
-            const positiveSegment = document.getElementById('positive-segment');
-            const neutralSegment = document.getElementById('neutral-segment');
-            const negativeSegment = document.getElementById('negative-segment');
-            
-            if (positiveSegment && neutralSegment && negativeSegment) {
-                positiveSegment.style.width = "{{ analysis.positive_percent }}%";
-                positiveSegment.textContent = "{{ analysis.positive_percent }}%";
-                
-                neutralSegment.style.width = "{{ analysis.neutral_percent }}%";
-                neutralSegment.textContent = "{{ analysis.neutral_percent }}%";
-                
-                negativeSegment.style.width = "{{ analysis.negative_percent }}%";
-                negativeSegment.textContent = "{{ analysis.negative_percent }}%";
-            }
-            
-            // Panggil fungsi untuk update UI
-            updateAnalysisResults(analysisResults);
-            
-            // Initialize pagination
-            initializePagination();
-            
-            // Generate topics for chatbot
-            generateTopics(analysisResults);
-            
-            // Create word cloud
-            createImprovedWordCloud(analysisResults);
+        
+        // Update top hashtags
+        updateTopHashtags(data.top_hashtags || []);
+        
+        // Update all hashtags
+        updateAllHashtags(data.top_hashtags || []);
+        
+        // Update top users
+        updateTopUsers(data.top_users || []);
+        
+        // Update main topics
+        updateMainTopics(data.topics || []);
+        
+        // Update topik utama
+        updateTopikUtama(data.topics || []);
+        
+        // Update hashtag sentiment
+        updateHashtagSentiment(data.hashtag_sentiment || []);
+        
+        // Update sentiment plot
+        updateSentimentPlot(data.sentiment_plot);
+        
+        // Initialize word cloud
+        if (typeof createImprovedWordCloud === 'function') {
+            createImprovedWordCloud(data);
         } else {
-            console.error("Data analisis tidak tersedia. Cek endpoint API atau variabel session.");
+            initializeWordCloud(data);
+        }
+        
+        // Initialize tweet list
+        initializeTweetList(data.tweets || []);
+        
+        // Create sentiment by hashtag chart
+        createSentimentByHashtagChart(data.hashtag_sentiment || []);
+        
+        // Create sentiment by location chart
+        createSentimentByLocationChart(data.tweets || []);
+        
+        // Create sentiment by language chart
+        createSentimentByLanguageChart(data.tweets || []);
+        
+        // Create word frequency charts
+        if (data.sentiment_words) {
+            createWordFrequencyChart('positive-words-chart', data.sentiment_words.positive || [], 'Kata Umum dalam Sentimen Positif', '#ffffff');
+            createWordFrequencyChart('neutral-words-chart', data.sentiment_words.neutral || [], 'Kata Umum dalam Sentimen Netral', '#9e9e9e');
+            createWordFrequencyChart('negative-words-chart', data.sentiment_words.negative || [], 'Kata Umum dalam Sentimen Negatif', '#000000');
+        }
+        
+        // Initialize chatbot with welcome message
+        initializeChatbot(data);
+    }
+
+    // Function to update top hashtags
+    function updateTopHashtags(hashtags) {
+        const topHashtags = document.getElementById('top-hashtags');
+        if (!topHashtags) return;
+        
+        topHashtags.innerHTML = '';
+        
+        if (hashtags && hashtags.length > 0) {
+            hashtags.forEach((hashtag, index) => {
+                const tag = document.createElement('div');
+                tag.className = 'tag animate-fade-in';
+                tag.style.animationDelay = `${index * 0.1}s`;
+                
+                const tagText = hashtag.tag ? hashtag.tag : (typeof hashtag === 'string' ? hashtag : '');
+                const count = hashtag.count ? hashtag.count : '';
+                
+                tag.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16"></path><path d="M4 15h16"></path><path d="M10 3L8 21"></path><path d="M16 3l-2 18"></path></svg> ${tagText} ${count ? `(${count})` : ''}`;
+                topHashtags.appendChild(tag);
+            });
+        } else {
+            topHashtags.innerHTML = '<div class="text-muted">Tidak ada hashtag ditemukan</div>';
         }
     }
-    );
+
+    // Function to update all hashtags
+    function updateAllHashtags(hashtags) {
+        const allHashtags = document.getElementById('all-hashtags');
+        if (!allHashtags) return;
+        
+        allHashtags.innerHTML = '';
+        
+        if (hashtags && hashtags.length > 0) {
+            hashtags.forEach((hashtag, index) => {
+                const tag = document.createElement('div');
+                tag.className = 'tag animate-fade-in';
+                tag.style.animationDelay = `${index * 0.05}s`;
+                
+                const tagText = hashtag.tag ? hashtag.tag : (typeof hashtag === 'string' ? hashtag : '');
+                const count = hashtag.count ? hashtag.count : '';
+                
+                tag.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16"></path><path d="M4 15h16"></path><path d="M10 3L8 21"></path><path d="M16 3l-2 18"></path></svg> ${tagText} ${count ? `(${count})` : ''}`;
+                allHashtags.appendChild(tag);
+            });
+        } else {
+            allHashtags.innerHTML = '<div class="text-muted">Tidak ada hashtag ditemukan</div>';
+        }
+    }
+
+    // Function to update top users
+    function updateTopUsers(users) {
+        const topUsers = document.getElementById('top-users');
+        if (!topUsers) return;
+        
+        topUsers.innerHTML = '';
+        
+        if (users && users.length > 0) {
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                row.className = 'animate-fade-in';
+                
+                const sentimentClass = user.dominant_sentiment === 'Positif' ? 'sentiment-positive' : 
+                                      user.dominant_sentiment === 'Netral' ? 'sentiment-neutral' : 'sentiment-negative';
+                
+                row.innerHTML = `
+                    <td><a href="https://twitter.com/${user.username}" target="_blank">@${user.username}</a></td>
+                    <td>${user.count}</td>
+                    <td>${Math.round(user.avg_engagement)}</td>
+                    <td><span class="${sentimentClass}">${user.dominant_sentiment}</span></td>
+                `;
+                
+                topUsers.appendChild(row);
+            });
+        } else {
+            topUsers.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Tidak ada data pengguna</td></tr>';
+        }
+    }
+
+    // Function to update main topics
+    function updateMainTopics(topics) {
+        const mainTopics = document.getElementById('main-topics');
+        if (!mainTopics) return;
+        
+        mainTopics.innerHTML = '';
+        
+        if (topics && topics.length > 0) {
+            topics.forEach((topic, index) => {
+                const row = document.createElement('tr');
+                row.className = 'animate-fade-in';
+                row.style.animationDelay = `${index * 0.1}s`;
+                
+                const topicText = typeof topic === 'object' ? topic.topic : topic;
+                const frequency = typeof topic === 'object' ? topic.frequency : '';
+                
+                row.innerHTML = `
+                    <td>${topicText}</td>
+                    <td>${frequency}</td>
+                `;
+                
+                mainTopics.appendChild(row);
+            });
+        } else {
+            mainTopics.innerHTML = '<tr><td colspan="2" class="text-center text-muted">Tidak ada data topik</td></tr>';
+        }
+    }
+
+    // Function to update topik utama
+    function updateTopikUtama(topics) {
+        const topikUtama = document.getElementById('topik-utama');
+        if (!topikUtama) return;
+        
+        topikUtama.innerHTML = '';
+        
+        if (topics && topics.length > 0) {
+            topics.forEach((topic, index) => {
+                const row = document.createElement('tr');
+                row.className = 'animate-fade-in';
+                row.style.animationDelay = `${index * 0.1}s`;
+                
+                const topicText = typeof topic === 'object' ? topic.topic : topic;
+                const frequency = typeof topic === 'object' ? topic.frequency : '';
+                
+                row.innerHTML = `
+                    <td>${topicText}</td>
+                    <td>${frequency}</td>
+                `;
+                
+                topikUtama.appendChild(row);
+            });
+        } else {
+            topikUtama.innerHTML = '<tr><td colspan="2" class="text-center text-muted">Tidak ada data topik</td></tr>';
+        }
+    }
+
+    // Function to update hashtag sentiment
+    function updateHashtagSentiment(hashtagSentiment) {
+        const hashtagSentimentEl = document.getElementById('hashtag-sentiment');
+        if (!hashtagSentimentEl) return;
+        
+        hashtagSentimentEl.innerHTML = '';
+        
+        if (hashtagSentiment && hashtagSentiment.length > 0) {
+            hashtagSentiment.forEach((stat, index) => {
+                const row = document.createElement('tr');
+                row.className = 'animate-fade-in';
+                row.style.animationDelay = `${index * 0.1}s`;
+                
+                row.innerHTML = `
+                    <td>${stat.tag}</td>
+                    <td>${stat.positive}%</td>
+                    <td>${stat.neutral}%</td>
+                    <td>${stat.negative}%</td>
+                    <td>${stat.total}</td>
+                `;
+                
+                hashtagSentimentEl.appendChild(row);
+            });
+        } else {
+            hashtagSentimentEl.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Tidak ada data sentimen hashtag</td></tr>';
+        }
+    }
+
+    // Function to update sentiment plot
+    function updateSentimentPlot(plotData) {
+        const sentimentPlot = document.getElementById('sentiment-plot');
+        const loadingEl = document.querySelector('.sentiment-plot-loading');
+        
+        if (!sentimentPlot) return;
+        
+        if (plotData) {
+            sentimentPlot.src = 'data:image/png;base64,' + plotData;
+            sentimentPlot.classList.remove('d-none');
+            sentimentPlot.classList.add('animate-fade-in');
+            
+            if (loadingEl) {
+                loadingEl.style.display = 'none';
+            }
+        } else {
+            sentimentPlot.classList.add('d-none');
+            
+            if (loadingEl) {
+                loadingEl.innerHTML = '<div class="alert alert-warning">Visualisasi tidak tersedia</div>';
+            }
+        }
+    }
+
+    // Function to initialize word cloud
+    function initializeWordCloud(data) {
+        const wordCloudContainer = document.getElementById('word-cloud-container');
+        if (!wordCloudContainer) return;
+        
+        if (!data || !data.tweets || data.tweets.length === 0) {
+            wordCloudContainer.innerHTML = '<div class="alert alert-warning">Data tidak cukup untuk membuat word cloud</div>';
+            return;
+        }
+        
+        // Jika sudah ada word cloud, jangan buat lagi
+        if (wordCloudContainer.querySelector('svg') || wordCloudContainer.querySelector('.word')) {
+            return;
+        }
+        
+        // Simple word cloud placeholder
+        wordCloudContainer.innerHTML = '<div class="text-center py-5">Word cloud akan ditampilkan di sini.</div>';
+    }
+
+    // Function to initialize tweet list
+    function initializeTweetList(tweets) {
+        allTweets = tweets || [];
+        filteredTweets = [...allTweets];
+        
+        // Set up event listeners
+        const sentimentFilter = document.getElementById('sentiment-filter');
+        const tweetSearch = document.getElementById('tweet-search');
+        const itemsPerPage = document.getElementById('items-per-page');
+        
+        if (sentimentFilter) {
+            sentimentFilter.addEventListener('change', function() {
+                currentPage = 1;
+                filterAndDisplayTweets();
+            });
+        }
+        
+        if (tweetSearch) {
+            tweetSearch.addEventListener('input', function() {
+                searchQuery = this.value.trim().toLowerCase();
+                currentPage = 1;
+                filterAndDisplayTweets();
+            });
+        }
+        
+        if (itemsPerPage) {
+            itemsPerPage.addEventListener('change', function() {
+                tweetsPerPage = parseInt(this.value);
+                currentPage = 1;
+                filterAndDisplayTweets();
+            });
+        }
+        
+        // Display tweets
+        filterAndDisplayTweets();
+    }
+
+    // Function to filter and display tweets
+    function filterAndDisplayTweets() {
+        const sentimentFilter = document.getElementById('sentiment-filter');
+        const selectedSentiment = sentimentFilter ? sentimentFilter.value : 'all';
+        
+        // First filter by sentiment
+        let tempFilteredTweets = [...allTweets];
+        
+        if (selectedSentiment !== 'all') {
+            tempFilteredTweets = tempFilteredTweets.filter(tweet => tweet.predicted_sentiment === selectedSentiment);
+        }
+        
+        // Then filter by search query if present
+        if (searchQuery) {
+            tempFilteredTweets = tempFilteredTweets.filter(tweet => {
+                // Search in content, username or hashtags
+                return (
+                    (tweet.content && tweet.content.toLowerCase().includes(searchQuery)) || 
+                    (tweet.username && tweet.username.toLowerCase().includes(searchQuery))
+                );
+            });
+        }
+        
+        filteredTweets = tempFilteredTweets;
+        
+        // Update pagination
+        updatePagination();
+        
+        // Display current page
+        displayTweets();
+    }
+
+    // Function to update pagination
+    function updatePagination() {
+        const paginationContainer = document.getElementById('pagination-container');
+        if (!paginationContainer) return;
+        
+        const totalPages = Math.ceil(filteredTweets.length / tweetsPerPage);
+        
+        // Adjust current page if needed
+        if (currentPage > totalPages) {
+            currentPage = totalPages > 0 ? totalPages : 1;
+        }
+        
+        // Clear pagination container
+        paginationContainer.innerHTML = '';
+        
+        // Create pagination element
+        const pagination = document.createElement('ul');
+        pagination.className = 'pagination';
+        
+        // Previous button
+        const prevLi = document.createElement('li');
+        prevLi.className = 'page-item' + (currentPage === 1 ? ' disabled' : '');
+        const prevLink = document.createElement('a');
+        prevLink.className = 'page-link';
+        prevLink.href = '#';
+        prevLink.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>';
+        prevLink.setAttribute('aria-label', 'Previous');
+        prevLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (currentPage > 1) {
+                currentPage--;
+                displayTweets();
+                updatePagination();
+            }
+        });
+        prevLi.appendChild(prevLink);
+        pagination.appendChild(prevLi);
+        
+        // Page numbers
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, startPage + 4);
+        
+        if (endPage - startPage < 4 && startPage > 1) {
+            startPage = Math.max(1, endPage - 4);
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            const pageLi = document.createElement('li');
+            pageLi.className = 'page-item' + (i === currentPage ? ' active' : '');
+            const pageLink = document.createElement('a');
+            pageLink.className = 'page-link';
+            pageLink.href = '#';
+            pageLink.textContent = i;
+            pageLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                currentPage = i;
+                displayTweets();
+                updatePagination();
+            });
+            pageLi.appendChild(pageLink);
+            pagination.appendChild(pageLi);
+        }
+        
+        // Next button
+        const nextLi = document.createElement('li');
+        nextLi.className = 'page-item' + (currentPage === totalPages || totalPages === 0 ? ' disabled' : '');
+        const nextLink = document.createElement('a');
+        nextLink.className = 'page-link';
+        nextLink.href = '#';
+        nextLink.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+        nextLink.setAttribute('aria-label', 'Next');
+        nextLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (currentPage < totalPages) {
+                currentPage++;
+                displayTweets();
+                updatePagination();
+            }
+        });
+        nextLi.appendChild(nextLink);
+        pagination.appendChild(nextLi);
+        
+        // Append pagination to container
+        paginationContainer.appendChild(pagination);
+        
+        // Show pagination info
+        const paginationInfo = document.createElement('div');
+        paginationInfo.className = 'text-muted mt-2 text-center';
+        
+        if (filteredTweets.length === 0) {
+            paginationInfo.textContent = "Tidak ada tweet yang ditemukan";
+        } else {
+            const start = (currentPage - 1) * tweetsPerPage + 1;
+            const end = Math.min(currentPage * tweetsPerPage, filteredTweets.length);
+            paginationInfo.textContent = `Menampilkan ${start} sampai ${end} dari ${filteredTweets.length} tweets`;
+        }
+        
+        paginationContainer.appendChild(paginationInfo);
+    }
+
+    // Function to display tweets
+    function displayTweets() {
+        const tweetContainer = document.getElementById('tweet-container');
+        if (!tweetContainer) return;
+        
+        tweetContainer.innerHTML = '';
+        
+        if (!filteredTweets || filteredTweets.length === 0) {
+            if (searchQuery) {
+                tweetContainer.innerHTML = '<p class="text-center text-muted my-5">Tidak ada tweet yang sesuai dengan pencarian.</p>';
+            } else {
+                tweetContainer.innerHTML = '<p class="text-center text-muted my-5">Tidak ada tweet yang ditemukan.</p>';
+            }
+            return;
+        }
+        
+        // Calculate start and end index
+        const startIndex = (currentPage - 1) * tweetsPerPage;
+        const endIndex = Math.min(startIndex + tweetsPerPage, filteredTweets.length);
+        
+        // Display tweets for current page with animation
+        for (let i = startIndex; i < endIndex; i++) {
+            const tweet = filteredTweets[i];
+            const tweetCard = document.createElement('div');
+            tweetCard.className = 'tweet-card animate-fade-in';
+            tweetCard.style.animationDelay = `${(i - startIndex) * 0.05}s`;
+            
+            const sentimentClass = tweet.predicted_sentiment === 'Positif' ? 'badge-positive' : 
+                                  tweet.predicted_sentiment === 'Netral' ? 'badge-neutral' : 'badge-negative';
+            
+            // Format date to be more readable
+            const formattedDate = formatDate(tweet.date);
+            
+            tweetCard.innerHTML = `
+                <div class="tweet-header">
+                    <span class="tweet-username">
+                        <a href="https://twitter.com/${tweet.username}" target="_blank">@${tweet.username}</a>
+                    </span>
+                    <span class="tweet-date">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        ${formattedDate}
+                    </span>
+                </div>
+                <div class="tweet-content">
+                    ${linkifyText(tweet.content)}
+                </div>
+                ${tweet.image_url ? `<div class="tweet-image mt-2 mb-2">
+                    <a href="${tweet.image_url}" target="_blank">
+                        <img src="${tweet.image_url}" alt="Tweet image" class="img-fluid rounded" style="max-height: 200px;">
+                    </a>
+                </div>` : ''}
+                <div class="tweet-stats">
+                    <span title="Likes"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg> ${formatNumber(tweet.likes)}</span>
+                    <span title="Retweets"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg> ${formatNumber(tweet.retweets)}</span>
+                    <span title="Replies"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg> ${formatNumber(tweet.replies)}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <div>
+                        <span class="tweet-badge ${sentimentClass}">${tweet.predicted_sentiment}</span>
+                        <span class="confidence-badge">${parseFloat(tweet.confidence).toFixed(1)}%</span>
+                    </div>
+                    ${tweet.tweet_url ? `
+                        <a href="${tweet.tweet_url}" class="btn btn-sm btn-outline-dark" target="_blank">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg>
+                            View on X
+                        </a>` : ''}
+                </div>
+            `;
+            
+            tweetContainer.appendChild(tweetCard);
+        }
+    }
+
+    // Function to create sentiment by hashtag chart
+    function createSentimentByHashtagChart(hashtagSentimentData) {
+        const chartContainer = document.getElementById('sentiment-by-hashtag-chart');
+        if (!chartContainer) return;
+        
+        // Clear existing content
+        chartContainer.innerHTML = '';
+        
+        if (!hashtagSentimentData || hashtagSentimentData.length === 0) {
+            chartContainer.innerHTML = '<div class="alert alert-warning">Tidak ada data hashtag yang cukup untuk membuat visualisasi</div>';
+            return;
+        }
+        
+        // Ambil top 5 hashtag berdasarkan total count
+        const top5Hashtags = hashtagSentimentData
+            .sort((a, b) => b.total - a.total)
+            .slice(0, 5);
+        
+        if (top5Hashtags.length === 0) {
+            chartContainer.innerHTML = '<div class="alert alert-warning">Tidak ada data hashtag yang cukup untuk membuat visualisasi</div>';
+            return;
+        }
+        
+        const labels = top5Hashtags.map(item => item.tag);
+        const positiveData = top5Hashtags.map(item => item.positive);
+        const neutralData = top5Hashtags.map(item => item.neutral);
+        const negativeData = top5Hashtags.map(item => item.negative);
+        
+        // Buat chart
+        const ctx = document.createElement('canvas');
+        chartContainer.appendChild(ctx);
+        
+        // Destroy previous chart instance if exists
+        if (sentimentByHashtagChart) {
+            sentimentByHashtagChart.destroy();
+        }
+        
+        // Buat chart baru
+        sentimentByHashtagChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Positif',
+                        data: positiveData,
+                        backgroundColor: '#ffffff',
+                        borderColor: '#dddddd',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Netral',
+                        data: neutralData,
+                        backgroundColor: '#9e9e9e',
+                        borderColor: '#757575',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Negatif',
+                        data: negativeData,
+                        backgroundColor: '#000000',
+                        borderColor: '#000000',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Hashtag',
+                            font: {
+                                weight: 'bold'
+                            }
+                        },
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Persentase (%)',
+                            font: {
+                                weight: 'bold'
+                            }
+                        },
+                        min: 0,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Sentimen Berdasarkan Hashtag (Top 5)',
+                        font: {
+                            size: 16,
+                            weight: 'bold'
+                        },
+                        padding: {
+                            bottom: 15
+                        }
+                    },
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.raw + '%';
+                            }
+                        }
+                    }
+                },
+                animation: {
+                    duration: 1000,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+    }
+
+    // Function to create sentiment by location chart
+    function createSentimentByLocationChart(tweetsData) {
+        const chartContainer = document.getElementById('sentiment-by-location-chart');
+        if (!chartContainer) return;
+        
+        // Clear existing content
+        chartContainer.innerHTML = '';
+        
+        if (!tweetsData || tweetsData.length === 0) {
+            chartContainer.innerHTML = '<div class="alert alert-warning">Tidak ada data lokasi yang cukup untuk membuat visualisasi</div>';
+            return;
+        }
+        
+        // Group tweets berdasarkan lokasi dan sentimen
+        const locationData = {};
+        
+        tweetsData.forEach(tweet => {
+            if (tweet.location) {
+                if (!locationData[tweet.location]) {
+                    locationData[tweet.location] = {
+                        Positif: 0,
+                        Netral: 0,
+                        Negatif: 0,
+                        total: 0
+                    };
+                }
+                
+                locationData[tweet.location][tweet.predicted_sentiment]++;
+                locationData[tweet.location].total++;
+            }
+        });
+        
+        // Convert to array dan sort berdasarkan total
+        const locationArray = Object.entries(locationData)
+            .map(([location, data]) => ({
+                location,
+                ...data,
+                positivePercent: (data.Positif / data.total * 100).toFixed(1),
+                neutralPercent: (data.Netral / data.total * 100).toFixed(1),
+                negativePercent: (data.Negatif / data.total * 100).toFixed(1)
+            }))
+            .filter(item => item.total >= 2) // Filter lokasi dengan minimal 2 tweets
+            .sort((a, b) => b.total - a.total)
+            .slice(0, 5); // Ambil top 5
+        
+        if (locationArray.length === 0) {
+            chartContainer.innerHTML = '<div class="alert alert-warning">Data lokasi tidak cukup untuk menampilkan grafik.</div>';
+            return;
+        }
+        
+        const labels = locationArray.map(item => item.location);
+        const positiveData = locationArray.map(item => parseFloat(item.positivePercent));
+        const neutralData = locationArray.map(item => parseFloat(item.neutralPercent));
+        const negativeData = locationArray.map(item => parseFloat(item.negativePercent));
+        
+        // Buat chart
+        const ctx = document.createElement('canvas');
+        chartContainer.appendChild(ctx);
+        
+        // Destroy previous chart instance if exists
+        if (sentimentByLocationChart) {
+            sentimentByLocationChart.destroy();
+        }
+        
+        // Buat chart baru
+        sentimentByLocationChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Positif',
+                        data: positiveData,
+                        backgroundColor: '#ffffff',
+                        borderColor: '#dddddd',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Netral',
+                        data: neutralData,
+                        backgroundColor: '#9e9e9e',
+                        borderColor: '#757575',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Negatif',
+                        data: negativeData,
+                        backgroundColor: '#000000',
+                        borderColor: '#000000',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Lokasi',
+                            font: {
+                                weight: 'bold'
+                            }
+                        },
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 45
+                        },
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Persentase (%)',
+                            font: {
+                                weight: 'bold'
+                            }
+                        },
+                        min: 0,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Sentimen Berdasarkan Lokasi (Top 5)',
+                        font: {
+                            size: 16,
+                            weight: 'bold'
+                        },
+                        padding: {
+                            bottom: 15
+                        }
+                    },
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.raw + '%';
+                            },
+                            afterLabel: function(context) {
+                                const index = context.dataIndex;
+                                const locationItem = locationArray[index];
+                                return 'Total tweets: ' + locationItem.total;
+                            }
+                        }
+                    }
+                },
+                animation: {
+                    duration: 1200,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+    }
+    
+    // Function to create sentiment by language chart
+    function createSentimentByLanguageChart(tweetsData) {
+        const chartContainer = document.getElementById('sentiment-by-language-chart');
+        if (!chartContainer) return;
+        
+        // Clear existing content
+        chartContainer.innerHTML = '';
+        
+        if (!tweetsData || tweetsData.length === 0) {
+            chartContainer.innerHTML = '<div class="alert alert-warning">Tidak ada data bahasa yang cukup untuk membuat visualisasi</div>';
+            return;
+        }
+        
+        // Group tweets berdasarkan bahasa dan sentimen
+        const languageData = {};
+        const languageNames = {
+            'in': 'Indonesia',
+            'en': 'English',
+            'id': 'Indonesia',
+            'qme': 'Quechua',
+            'und': 'Undefined',
+            'ar': 'Arabic',
+            'fr': 'French',
+            'es': 'Spanish',
+            'de': 'German'
+        };
+        
+        tweetsData.forEach(tweet => {
+            if (tweet.lang) {
+                if (!languageData[tweet.lang]) {
+                    languageData[tweet.lang] = {
+                        Positif: 0,
+                        Netral: 0,
+                        Negatif: 0,
+                        total: 0
+                    };
+                }
+                
+                languageData[tweet.lang][tweet.predicted_sentiment]++;
+                languageData[tweet.lang].total++;
+            }
+        });
+        
+        // Convert to array dan sort berdasarkan total
+        const languageArray = Object.entries(languageData)
+            .map(([lang, data]) => ({
+                lang,
+                langName: languageNames[lang] || lang,
+                ...data,
+                positivePercent: (data.Positif / data.total * 100).toFixed(1),
+                neutralPercent: (data.Netral / data.total * 100).toFixed(1),
+                negativePercent: (data.Negatif / data.total * 100).toFixed(1)
+            }))
+            .sort((a, b) => b.total - a.total)
+            .slice(0, 5); // Ambil top 5
+        
+        if (languageArray.length === 0) {
+            chartContainer.innerHTML = '<div class="alert alert-warning">Data bahasa tidak cukup untuk menampilkan grafik.</div>';
+            return;
+        }
+        
+        const labels = languageArray.map(item => item.langName);
+        const positiveData = languageArray.map(item => parseFloat(item.positivePercent));
+        const neutralData = languageArray.map(item => parseFloat(item.neutralPercent));
+        const negativeData = languageArray.map(item => parseFloat(item.negativePercent));
+        
+        // Buat chart
+        const ctx = document.createElement('canvas');
+        chartContainer.appendChild(ctx);
+        
+        // Destroy previous chart instance if exists
+        if (sentimentByLanguageChart) {
+            sentimentByLanguageChart.destroy();
+        }
+        
+        // Buat chart baru
+        sentimentByLanguageChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Positif',
+                        data: positiveData,
+                        backgroundColor: '#ffffff',
+                        borderColor: '#dddddd',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Netral',
+                        data: neutralData,
+                        backgroundColor: '#9e9e9e',
+                        borderColor: '#757575',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Negatif',
+                        data: negativeData,
+                        backgroundColor: '#000000',
+                        borderColor: '#000000',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Bahasa',
+                            font: {
+                                weight: 'bold'
+                            }
+                        },
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Persentase (%)',
+                            font: {
+                                weight: 'bold'
+                            }
+                        },
+                        min: 0,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Sentimen Berdasarkan Bahasa (Top 5)',
+                        font: {
+                            size: 16,
+                            weight: 'bold'
+                        },
+                        padding: {
+                            bottom: 15
+                        }
+                    },
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.raw + '%';
+                            },
+                            afterLabel: function(context) {
+                                const index = context.dataIndex;
+                                const languageItem = languageArray[index];
+                                return 'Total tweets: ' + languageItem.total;
+                            }
+                        }
+                    }
+                },
+                animation: {
+                    duration: 1400,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+    }
+
+    // Function to create word frequency chart
+    function createWordFrequencyChart(containerId, wordFrequencies, title, color) {
+        const chartContainer = document.getElementById(containerId);
+        if (!chartContainer) return;
+        
+        // Clear existing content
+        chartContainer.innerHTML = '';
+        
+        if (!wordFrequencies || wordFrequencies.length === 0) {
+            chartContainer.innerHTML = '<p class="text-center text-muted my-5">Tidak cukup data untuk menampilkan grafik ini.</p>';
+            return;
+        }
+        
+        // Siapkan data untuk chart
+        const wordsArray = wordFrequencies
+            .map(item => ({ word: item.word, count: item.count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10);
+        
+        if (wordsArray.length === 0) {
+            chartContainer.innerHTML = '<p class="text-center text-muted my-5">Tidak cukup data untuk menampilkan grafik ini.</p>';
+            return;
+        }
+        
+        const labels = wordsArray.map(item => item.word);
+        const data = wordsArray.map(item => item.count);
+        
+        // Buat chart
+        const ctx = document.createElement('canvas');
+        chartContainer.appendChild(ctx);
+        
+        // Tentukan warna teks berdasarkan warna background
+        let textColor = '#000000';
+        if (color === '#000000') {
+            textColor = '#ffffff';
+        }
+        
+        // Get chart instance berdasarkan containerId
+        let chartInstance;
+        
+        if (containerId === 'positive-words-chart') {
+            // Destroy previous chart instance if exists
+            if (positiveWordsChart) {
+                positiveWordsChart.destroy();
+            }
+            
+            // Buat chart baru
+            chartInstance = positiveWordsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Frekuensi',
+                            data: data,
+                            backgroundColor: color,
+                            borderColor: '#333333',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: getWordChartOptions(title, textColor)
+            });
+        } else if (containerId === 'neutral-words-chart') {
+            // Destroy previous chart instance if exists
+            if (neutralWordsChart) {
+                neutralWordsChart.destroy();
+            }
+            
+            // Buat chart baru
+            chartInstance = neutralWordsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Frekuensi',
+                            data: data,
+                            backgroundColor: color,
+                            borderColor: '#333333',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: getWordChartOptions(title, textColor)
+            });
+        } else if (containerId === 'negative-words-chart') {
+            // Destroy previous chart instance if exists
+            if (negativeWordsChart) {
+                negativeWordsChart.destroy();
+            }
+            
+            // Buat chart baru
+            chartInstance = negativeWordsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Frekuensi',
+                            data: data,
+                            backgroundColor: color,
+                            borderColor: '#333333',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: getWordChartOptions(title, textColor)
+            });
+        }
+        
+        return chartInstance;
+    }
+
+    // Helper function for word chart options
+    function getWordChartOptions(title, textColor) {
+        return {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Frekuensi',
+                        font: {
+                            weight: 'bold'
+                        }
+                    },
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                y: {
+                    title: {
+                        display: false
+                    },
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: title,
+                    font: {
+                        size: 16,
+                        weight: 'bold'
+                    },
+                    padding: {
+                        bottom: 15
+                    }
+                },
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Frekuensi: ' + context.raw;
+                        }
+                    }
+                }
+            },
+            animation: {
+                delay: function(context) {
+                    return context.dataIndex * 100;
+                },
+                duration: 1000,
+                easing: 'easeOutQuart'
+            }
+        };
+    }
+
+    // Initialize chatbot with welcome message
+    function initializeChatbot(data) {
+        const chatbotMessages = document.getElementById('chatbot-messages');
+        if (!chatbotMessages) return;
+        
+        // Clear any existing messages
+        chatbotMessages.innerHTML = '';
+        
+        // Create welcome message
+        const welcomeMessage = document.createElement('div');
+        welcomeMessage.className = 'message message-bot animate-fade-in';
+        
+        // Build the welcome message with data from analysis
+        let messageContent = `
+            <div class="mb-2"><strong>Selamat datang di Chatbot Evaluasi Kebijakan!</strong></div>
+            <p>Saya akan membantu Anda menganalisis data sentimen X tentang ${data.title || "{{ analysis.title }}"}.</p>
+            <div class="mb-2"><strong>Ringkasan Analisis:</strong></div>
+            <ul>
+                <li>Total tweets: ${data.total_tweets || "{{ analysis.total_tweets }}"}</li>
+                <li>Sentimen Positif: ${data.positive_count || "{{ analysis.positive_count }}"} tweets (${data.positive_percent || "{{ analysis.positive_percent }}"}%)</li>
+                <li>Sentimen Netral: ${data.neutral_count || "{{ analysis.neutral_count }}"} tweets (${data.neutral_percent || "{{ analysis.neutral_percent }}"}%)</li>
+                <li>Sentimen Negatif: ${data.negative_count || "{{ analysis.negative_count }}"} tweets (${data.negative_percent || "{{ analysis.negative_percent }}"}%)</li>
+            </ul>
+            <p>Silakan pilih topik di bawah ini atau ajukan pertanyaan Anda sendiri.</p>
+        `;
+        
+        welcomeMessage.innerHTML = messageContent;
+        chatbotMessages.appendChild(welcomeMessage);
+        
+        // Scroll to bottom
+        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+    }
+
+    // Generate topic buttons for chatbot
+    function generateTopicButtons(data) {
+        const chatbotTopicButtons = document.getElementById('chatbot-topic-buttons');
+        if (!chatbotTopicButtons) return;
+        
+        chatbotTopicButtons.innerHTML = '';
+        
+        // Base topics on hashtags, top words, and key program areas
+        const topics = new Set();
+        
+        // Add from hashtags
+        if (data.top_hashtags && data.top_hashtags.length > 0) {
+            data.top_hashtags.slice(0, 7).forEach(hashtag => {
+                const topic = hashtag.tag ? hashtag.tag.replace('#', '') : (typeof hashtag === 'string' ? hashtag.replace('#', '') : '');
+                if (topic) topics.add(topic);
+            });
+        }
+        
+        // Add from topics
+        if (data.topics && data.topics.length > 0) {
+            data.topics.slice(0, 7).forEach(topic => {
+                const topicText = typeof topic === 'object' ? topic.topic : topic;
+                if (topicText) topics.add(topicText);
+            });
+        }
+        
+        // Get words from each sentiment category
+        if (data.sentiment_words) {
+            // Add top positive words
+            if (data.sentiment_words.positive && data.sentiment_words.positive.length > 0) {
+                data.sentiment_words.positive.slice(0, 3).forEach(item => {
+                    const word = typeof item === 'object' ? item.word : item;
+                    if (word && word.length > 3) {
+                        topics.add(word);
+                    }
+                });
+            }
+            
+            // Add top negative words
+            if (data.sentiment_words.negative && data.sentiment_words.negative.length > 0) {
+                data.sentiment_words.negative.slice(0, 3).forEach(item => {
+                    const word = typeof item === 'object' ? item.word : item;
+                    if (word && word.length > 3) {
+                        topics.add(word);
+                    }
+                });
+            }
+        }
+        
+        Array.from(topics).forEach(topic => {
+            const button = document.createElement('button');
+            button.className = 'topic-button animate-fade-in';
+            button.setAttribute('data-topic', topic);
+            button.textContent = topic;
+            
+            button.addEventListener('click', function() {
+                const chatbotInput = document.getElementById('chatbot-input');
+                if (chatbotInput) {
+                    chatbotInput.value = `Berikan evaluasi kebijakan terkait ${topic}`;
+                    sendChatbotMessage();
+                }
+            });
+            
+            chatbotTopicButtons.appendChild(button);
+        });
+        
+        // Add a message to indicate these are suggested topics
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'text-center w-100 mt-2 mb-2 animate-fade-in';
+        messageDiv.innerHTML = '<small class="text-muted">Topik diatas dibuat otomatis dari data yang dianalisa</small>';
+        chatbotTopicButtons.appendChild(messageDiv);
+    }
+
+    // Function to send message to chatbot
+    function sendChatbotMessage() {
+        const chatbotInput = document.getElementById('chatbot-input');
+        const chatbotMessages = document.getElementById('chatbot-messages');
+        
+        if (!chatbotInput || !chatbotMessages) return;
+        
+        const messageText = chatbotInput.value.trim();
+        
+        if (!messageText) return;
+        
+        // Add user message to chat
+        const userMessage = document.createElement('div');
+        userMessage.className = 'message message-user animate-fade-in';
+        userMessage.textContent = messageText;
+        chatbotMessages.appendChild(userMessage);
+        
+        // Clear input
+        chatbotInput.value = '';
+        
+        // Add loading indicator
+        const loadingMessage = document.createElement('div');
+        loadingMessage.className = 'message message-bot animate-fade-in';
+        loadingMessage.innerHTML = '<div class="d-flex align-items-center"><div class="spinner-grow spinner-grow-sm me-2" role="status"></div><span>Menganalisis data dan menyusun respons...</span></div>';
+        chatbotMessages.appendChild(loadingMessage);
+        
+        // Scroll to bottom
+        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        
+        // Send to server
+        fetch('/chatbot', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({message: messageText})
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Remove loading message
+            chatbotMessages.removeChild(loadingMessage);
+            
+            // Format the response text with proper line breaks and formatting
+            const formattedResponse = formatChatbotResponse(data.response);
+            
+            // Add bot response with animation
+            const botMessage = document.createElement('div');
+            botMessage.className = 'message message-bot animate-fade-in';
+            botMessage.innerHTML = formattedResponse;
+            chatbotMessages.appendChild(botMessage);
+            
+            // Scroll to bottom
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        })
+        .catch(error => {
+            // Remove loading message
+            chatbotMessages.removeChild(loadingMessage);
+            
+            // Add error message
+            const errorMessage = document.createElement('div');
+            errorMessage.className = 'message message-bot animate-fade-in';
+            errorMessage.textContent = 'Maaf, terjadi kesalahan dalam berkomunikasi dengan chatbot. Silakan coba lagi.';
+            chatbotMessages.appendChild(errorMessage);
+            
+            // Scroll to bottom
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        });
+    }
+
+    // Format chatbot response with proper HTML formatting
+    function formatChatbotResponse(text) {
+        if (!text) return '';
+        
+        // Convert line breaks to <br>
+        let formatted = text.replace(/\n/g, '<br>');
+        
+        // Format numbered lists (1. Item)
+        formatted = formatted.replace(/(\d+\.\s+[^\n<]+)(<br>|$)/g, '<li>$1</li>');
+        
+        // Format bullet points (- Item or • Item)
+        formatted = formatted.replace(/([-•]\s+[^\n<]+)(<br>|$)/g, '<li>$1</li>');
+        
+        // Wrap lists in <ul> tags
+        formatted = formatted.replace(/<li>([^<]+)<\/li>(<li>)/g, '<li>$1</li>$2');
+        formatted = formatted.replace(/<li>([^<]+)<\/li>(?!<li>)/g, '<ul><li>$1</li></ul>');
+        formatted = formatted.replace(/<\/ul><ul>/g, '');
+        
+        // Bold text between asterisks (*text*)
+        formatted = formatted.replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
+        
+        // Italic text between underscores (_text_)
+        formatted = formatted.replace(/_([^_]+)_/g, '<em>$1</em>');
+        
+        // Create paragraphs for text blocks
+        formatted = '<p>' + formatted.replace(/<br><br>/g, '</p><p>') + '</p>';
+        
+        // Clean up empty paragraphs
+        formatted = formatted.replace(/<p><\/p>/g, '');
+        
+        return formatted;
+    }
+
+    // Helper function to format numbers (e.g., 1000 -> 1K)
+    function formatNumber(num) {
+        if (!num) return 0;
+        if (num >= 1000000) {
+            return (num / 1000000).toFixed(1) + 'M';
+        } else if (num >= 1000) {
+            return (num / 1000).toFixed(1) + 'K';
+        }
+        return num;
+    }
+
+    // Helper function to format date
+    function formatDate(dateStr) {
+        if (!dateStr) return '';
+        
+        const months = {
+            'Jan': 'Januari',
+            'Feb': 'Februari',
+            'Mar': 'Maret',
+            'Apr': 'April',
+            'May': 'Mei',
+            'Jun': 'Juni',
+            'Jul': 'Juli',
+            'Aug': 'Agustus',
+            'Sep': 'September',
+            'Oct': 'Oktober',
+            'Nov': 'November',
+            'Dec': 'Desember'
+        };
+        
+        // Check if date is in format "DD MMM YYYY"
+        const dateParts = dateStr.split(' ');
+        if (dateParts.length === 3) {
+            const day = dateParts[0];
+            const month = months[dateParts[1]] || dateParts[1];
+            const year = dateParts[2];
+            return `${day} ${month} ${year}`;
+        }
+        
+        return dateStr;
+    }
+
+    // Make links, hashtags and mentions clickable
+    function linkifyText(text) {
+        if (!text) return '';
+        
+        // URL pattern
+        const urlPattern = /https?:\/\/[^\s]+/g;
+        // Hashtag pattern
+        const hashtagPattern = /#(\w+)/g;
+        // Mention pattern
+        const mentionPattern = /@(\w+)/g;
+        
+        // Replace URLs with clickable links
+        let processedText = text.replace(urlPattern, url => 
+            `<a href="${url}" target="_blank">${url.length > 30 ? url.substring(0, 27) + '...' : url}</a>`
+        );
+        
+        // Replace hashtags with clickable links
+        processedText = processedText.replace(hashtagPattern, (match, hashtag) => 
+            `<a href="https://twitter.com/hashtag/${hashtag}" target="_blank" class="hashtag-link">${match}</a>`
+        );
+        
+        // Replace mentions with clickable links
+        processedText = processedText.replace(mentionPattern, (match, username) => 
+            `<a href="https://twitter.com/${username}" target="_blank" class="mention-link">${match}</a>`
+        );
+        
+        return processedText;
+    }
+
+    // Set up event handlers for the download report button
+    const downloadReportBtn = document.getElementById('download-report-btn');
+    if (downloadReportBtn) {
+        downloadReportBtn.addEventListener('click', function(e) {
+            // Menambahkan parameter ID analisis ke URL
+            const urlParts = window.location.pathname.split('/');
+            const analysisId = urlParts[urlParts.length - 1];
+            
+            if (analysisId && !isNaN(analysisId)) {
+                // Jika URL saat ini sudah berisi parameter query, tambahkan parameter id
+                if (this.href.includes('?')) {
+                    this.href += `&id=${analysisId}`;
+                } else {
+                    this.href += `?id=${analysisId}`;
+                }
+            }
+            
+            // Tambahkan loading state selama proses download
+            this.innerHTML = `
+                <div class="spinner-border spinner-border-sm me-2" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                Menyiapkan Laporan...
+            `;
+            
+            // Kembalikan tampilan semula setelah beberapa saat
+            setTimeout(() => {
+                this.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Unduh Report
+                `;
+            }, 3000);
+        });
+    }
+
+    // Initiate tab switching behavior with proper data loading
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set up tab switching behavior to ensure data is loaded properly
+        const resultTabs = document.querySelectorAll('#result-tabs button');
+        
+        resultTabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                const targetId = this.getAttribute('data-bs-target');
+                
+                // Perform specific actions based on the activated tab
+                if (targetId === '#tweets-content' && (!filteredTweets || filteredTweets.length === 0) && allTweets.length > 0) {
+                    // Reinitialize tweet list if it's empty but we have tweets available
+                    initializeTweetList(allTweets);
+                }
+            });
+        });
+        
+        // Check if we have data and start loading if not
+        if (!analysisResults) {
+            console.log("Loading analysis data from API...");
+            loadAnalysisData();
+        } else {
+            console.log("Using analysis data from script tag");
+            
+            // Store tweet data for tweet list
+            if (analysisResults.tweets) {
+                allTweets = analysisResults.tweets;
+                filteredTweets = [...allTweets];
+            }
+            
+            // Update UI with analysis data
+            updateUIWithAnalysisData(analysisResults);
+        }
+    });
 </script>
 {% endblock %}
