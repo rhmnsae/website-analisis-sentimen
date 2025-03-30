@@ -379,6 +379,10 @@
     let tweetsPerPage = 10;
     let filteredTweets = [];
     let searchQuery = '';
+
+    const sentimentFilter = document.getElementById('sentiment-filter');
+    const tweetSearch = document.getElementById('tweet-search');
+    const itemsPerPage = document.getElementById('items-per-page');
     
     // Chart instances to allow for updates
     let sentimentByHashtagChart = null;
@@ -982,6 +986,15 @@
         
         if (sentimentFilter) {
             sentimentFilter.addEventListener('change', function() {
+                console.log("Sentiment filter changed to:", this.value);
+                filterAndDisplayTweets();
+            });
+        }
+        
+        if (itemsPerPage) {
+            itemsPerPage.addEventListener('change', function() {
+                console.log("Items per page changed to:", this.value);
+                tweetsPerPage = parseInt(this.value);
                 currentPage = 1;
                 filterAndDisplayTweets();
             });
@@ -995,222 +1008,220 @@
             });
         }
         
-        if (itemsPerPage) {
-            itemsPerPage.addEventListener('change', function() {
-                tweetsPerPage = parseInt(this.value);
-                currentPage = 1;
-                filterAndDisplayTweets();
-            });
-        }
-        
         // Display tweets
         filterAndDisplayTweets();
     }
 
     // Function to filter and display tweets
     function filterAndDisplayTweets() {
-        const sentimentFilter = document.getElementById('sentiment-filter');
-        const selectedSentiment = sentimentFilter ? sentimentFilter.value : 'all';
-        
-        // First filter by sentiment
-        let tempFilteredTweets = [...allTweets];
-        
-        if (selectedSentiment !== 'all') {
-            tempFilteredTweets = tempFilteredTweets.filter(tweet => tweet.predicted_sentiment === selectedSentiment);
+            if (!allTweets || allTweets.length === 0) {
+                console.warn("No tweets to filter");
+                return;
+            }
+            
+            const selectedSentiment = sentimentFilter ? sentimentFilter.value : 'all';
+            
+            // Filter berdasarkan sentimen
+            let tempFilteredTweets = [...allTweets];
+            
+            if (selectedSentiment !== 'all') {
+                console.log("Filtering by sentiment:", selectedSentiment);
+                tempFilteredTweets = tempFilteredTweets.filter(tweet => tweet.predicted_sentiment === selectedSentiment);
+            }
+            
+            // Filter berdasarkan pencarian jika ada
+            if (searchQuery) {
+                console.log("Filtering by search:", searchQuery);
+                tempFilteredTweets = tempFilteredTweets.filter(tweet => {
+                    return (
+                        (tweet.content && tweet.content.toLowerCase().includes(searchQuery)) || 
+                        (tweet.username && tweet.username.toLowerCase().includes(searchQuery))
+                    );
+                });
+            }
+            
+            filteredTweets = tempFilteredTweets;
+            console.log("Filtered tweets count:", filteredTweets.length);
+            
+            // Update pagination
+            updatePagination();
+            
+            // Display current page
+            displayTweets();
         }
-        
-        // Then filter by search query if present
-        if (searchQuery) {
-            tempFilteredTweets = tempFilteredTweets.filter(tweet => {
-                // Search in content, username or hashtags
-                return (
-                    (tweet.content && tweet.content.toLowerCase().includes(searchQuery)) || 
-                    (tweet.username && tweet.username.toLowerCase().includes(searchQuery))
-                );
-            });
-        }
-        
-        filteredTweets = tempFilteredTweets;
-        
-        // Update pagination
-        updatePagination();
-        
-        // Display current page
-        displayTweets();
-    }
 
     // Function to update pagination
     function updatePagination() {
-        const paginationContainer = document.getElementById('pagination-container');
-        if (!paginationContainer) return;
-        
-        const totalPages = Math.ceil(filteredTweets.length / tweetsPerPage);
-        
-        // Adjust current page if needed
-        if (currentPage > totalPages) {
-            currentPage = totalPages > 0 ? totalPages : 1;
-        }
-        
-        // Clear pagination container
-        paginationContainer.innerHTML = '';
-        
-        // Create pagination element
-        const pagination = document.createElement('ul');
-        pagination.className = 'pagination';
-        
-        // Previous button
-        const prevLi = document.createElement('li');
-        prevLi.className = 'page-item' + (currentPage === 1 ? ' disabled' : '');
-        const prevLink = document.createElement('a');
-        prevLink.className = 'page-link';
-        prevLink.href = '#';
-        prevLink.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>';
-        prevLink.setAttribute('aria-label', 'Previous');
-        prevLink.addEventListener('click', function(e) {
-            e.preventDefault();
-            if (currentPage > 1) {
-                currentPage--;
-                displayTweets();
-                updatePagination();
+            const paginationContainer = document.getElementById('pagination-container');
+            if (!paginationContainer) return;
+            
+            const totalPages = Math.ceil(filteredTweets.length / tweetsPerPage);
+            
+            // Adjust current page if needed
+            if (currentPage > totalPages) {
+                currentPage = totalPages > 0 ? totalPages : 1;
             }
-        });
-        prevLi.appendChild(prevLink);
-        pagination.appendChild(prevLi);
-        
-        // Page numbers
-        let startPage = Math.max(1, currentPage - 2);
-        let endPage = Math.min(totalPages, startPage + 4);
-        
-        if (endPage - startPage < 4 && startPage > 1) {
-            startPage = Math.max(1, endPage - 4);
-        }
-        
-        for (let i = startPage; i <= endPage; i++) {
-            const pageLi = document.createElement('li');
-            pageLi.className = 'page-item' + (i === currentPage ? ' active' : '');
-            const pageLink = document.createElement('a');
-            pageLink.className = 'page-link';
-            pageLink.href = '#';
-            pageLink.textContent = i;
-            pageLink.addEventListener('click', function(e) {
+            
+            // Clear pagination container
+            paginationContainer.innerHTML = '';
+            
+            // Create pagination element
+            const pagination = document.createElement('ul');
+            pagination.className = 'pagination';
+            
+            // Previous button
+            const prevLi = document.createElement('li');
+            prevLi.className = 'page-item' + (currentPage === 1 ? ' disabled' : '');
+            const prevLink = document.createElement('a');
+            prevLink.className = 'page-link';
+            prevLink.href = '#';
+            prevLink.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>';
+            prevLink.setAttribute('aria-label', 'Previous');
+            prevLink.addEventListener('click', function(e) {
                 e.preventDefault();
-                currentPage = i;
-                displayTweets();
-                updatePagination();
+                if (currentPage > 1) {
+                    currentPage--;
+                    displayTweets();
+                    updatePagination();
+                }
             });
-            pageLi.appendChild(pageLink);
-            pagination.appendChild(pageLi);
-        }
-        
-        // Next button
-        const nextLi = document.createElement('li');
-        nextLi.className = 'page-item' + (currentPage === totalPages || totalPages === 0 ? ' disabled' : '');
-        const nextLink = document.createElement('a');
-        nextLink.className = 'page-link';
-        nextLink.href = '#';
-        nextLink.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>';
-        nextLink.setAttribute('aria-label', 'Next');
-        nextLink.addEventListener('click', function(e) {
-            e.preventDefault();
-            if (currentPage < totalPages) {
-                currentPage++;
-                displayTweets();
-                updatePagination();
+            prevLi.appendChild(prevLink);
+            pagination.appendChild(prevLi);
+            
+            // Page numbers
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, startPage + 4);
+            
+            if (endPage - startPage < 4 && startPage > 1) {
+                startPage = Math.max(1, endPage - 4);
             }
-        });
-        nextLi.appendChild(nextLink);
-        pagination.appendChild(nextLi);
-        
-        // Append pagination to container
-        paginationContainer.appendChild(pagination);
-        
-        // Show pagination info
-        const paginationInfo = document.createElement('div');
-        paginationInfo.className = 'text-muted mt-2 text-center';
-        
-        if (filteredTweets.length === 0) {
-            paginationInfo.textContent = "Tidak ada tweet yang ditemukan";
-        } else {
-            const start = (currentPage - 1) * tweetsPerPage + 1;
-            const end = Math.min(currentPage * tweetsPerPage, filteredTweets.length);
-            paginationInfo.textContent = `Menampilkan ${start} sampai ${end} dari ${filteredTweets.length} tweets`;
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const pageLi = document.createElement('li');
+                pageLi.className = 'page-item' + (i === currentPage ? ' active' : '');
+                const pageLink = document.createElement('a');
+                pageLink.className = 'page-link';
+                pageLink.href = '#';
+                pageLink.textContent = i;
+                pageLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    currentPage = i;
+                    displayTweets();
+                    updatePagination();
+                });
+                pageLi.appendChild(pageLink);
+                pagination.appendChild(pageLi);
+            }
+            
+            // Next button
+            const nextLi = document.createElement('li');
+            nextLi.className = 'page-item' + (currentPage === totalPages || totalPages === 0 ? ' disabled' : '');
+            const nextLink = document.createElement('a');
+            nextLink.className = 'page-link';
+            nextLink.href = '#';
+            nextLink.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+            nextLink.setAttribute('aria-label', 'Next');
+            nextLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    displayTweets();
+                    updatePagination();
+                }
+            });
+            nextLi.appendChild(nextLink);
+            pagination.appendChild(nextLi);
+            
+            // Append pagination to container
+            paginationContainer.appendChild(pagination);
+            
+            // Show pagination info
+            const paginationInfo = document.createElement('div');
+            paginationInfo.className = 'text-muted mt-2 text-center';
+            
+            if (filteredTweets.length === 0) {
+                paginationInfo.textContent = "Tidak ada tweet yang ditemukan";
+            } else {
+                const start = (currentPage - 1) * tweetsPerPage + 1;
+                const end = Math.min(currentPage * tweetsPerPage, filteredTweets.length);
+                paginationInfo.textContent = `Menampilkan ${start} sampai ${end} dari ${filteredTweets.length} tweets`;
+            }
+            
+            paginationContainer.appendChild(paginationInfo);
         }
-        
-        paginationContainer.appendChild(paginationInfo);
-    }
 
     // Function to display tweets
     function displayTweets() {
-        const tweetContainer = document.getElementById('tweet-container');
-        if (!tweetContainer) return;
-        
-        tweetContainer.innerHTML = '';
-        
-        if (!filteredTweets || filteredTweets.length === 0) {
-            if (searchQuery) {
-                tweetContainer.innerHTML = '<p class="text-center text-muted my-5">Tidak ada tweet yang sesuai dengan pencarian.</p>';
-            } else {
-                tweetContainer.innerHTML = '<p class="text-center text-muted my-5">Tidak ada tweet yang ditemukan.</p>';
+            const tweetContainer = document.getElementById('tweet-container');
+            if (!tweetContainer) return;
+            
+            tweetContainer.innerHTML = '';
+            
+            if (!filteredTweets || filteredTweets.length === 0) {
+                if (searchQuery) {
+                    tweetContainer.innerHTML = '<p class="text-center text-muted my-5">Tidak ada tweet yang sesuai dengan pencarian.</p>';
+                } else {
+                    tweetContainer.innerHTML = '<p class="text-center text-muted my-5">Tidak ada tweet yang ditemukan.</p>';
+                }
+                return;
             }
-            return;
-        }
-        
-        // Calculate start and end index
-        const startIndex = (currentPage - 1) * tweetsPerPage;
-        const endIndex = Math.min(startIndex + tweetsPerPage, filteredTweets.length);
-        
-        // Display tweets for current page with animation
-        for (let i = startIndex; i < endIndex; i++) {
-            const tweet = filteredTweets[i];
-            const tweetCard = document.createElement('div');
-            tweetCard.className = 'tweet-card animate-fade-in';
-            tweetCard.style.animationDelay = `${(i - startIndex) * 0.05}s`;
             
-            const sentimentClass = tweet.predicted_sentiment === 'Positif' ? 'badge-positive' : 
-                                  tweet.predicted_sentiment === 'Netral' ? 'badge-neutral' : 'badge-negative';
+            // Calculate start and end index
+            const startIndex = (currentPage - 1) * tweetsPerPage;
+            const endIndex = Math.min(startIndex + tweetsPerPage, filteredTweets.length);
             
-            // Format date to be more readable
-            const formattedDate = formatDate(tweet.date);
-            
-            tweetCard.innerHTML = `
-                <div class="tweet-header">
-                    <span class="tweet-username">
-                        <a href="https://twitter.com/${tweet.username}" target="_blank">@${tweet.username}</a>
-                    </span>
-                    <span class="tweet-date">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                        ${formattedDate}
-                    </span>
-                </div>
-                <div class="tweet-content">
-                    ${linkifyText(tweet.content)}
-                </div>
-                ${tweet.image_url ? `<div class="tweet-image mt-2 mb-2">
-                    <a href="${tweet.image_url}" target="_blank">
-                        <img src="${tweet.image_url}" alt="Tweet image" class="img-fluid rounded" style="max-height: 200px;">
-                    </a>
-                </div>` : ''}
-                <div class="tweet-stats">
-                    <span title="Likes"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg> ${formatNumber(tweet.likes)}</span>
-                    <span title="Retweets"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg> ${formatNumber(tweet.retweets)}</span>
-                    <span title="Replies"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg> ${formatNumber(tweet.replies)}</span>
-                </div>
-                <div class="d-flex justify-content-between align-items-center mt-2">
-                    <div>
-                        <span class="tweet-badge ${sentimentClass}">${tweet.predicted_sentiment}</span>
-                        <span class="confidence-badge">${parseFloat(tweet.confidence).toFixed(1)}%</span>
+            // Display tweets for current page with animation
+            for (let i = startIndex; i < endIndex; i++) {
+                const tweet = filteredTweets[i];
+                const tweetCard = document.createElement('div');
+                tweetCard.className = 'tweet-card animate-fade-in';
+                tweetCard.style.animationDelay = `${(i - startIndex) * 0.05}s`;
+                
+                const sentimentClass = tweet.predicted_sentiment === 'Positif' ? 'badge-positive' : 
+                                       tweet.predicted_sentiment === 'Netral' ? 'badge-neutral' : 'badge-negative';
+                
+                // Format date to be more readable
+                const formattedDate = formatDate(tweet.date);
+                
+                tweetCard.innerHTML = `
+                    <div class="tweet-header">
+                        <span class="tweet-username">
+                            <a href="https://twitter.com/${tweet.username}" target="_blank">@${tweet.username}</a>
+                        </span>
+                        <span class="tweet-date">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            ${formattedDate}
+                        </span>
                     </div>
-                    ${tweet.tweet_url ? `
-                        <a href="${tweet.tweet_url}" class="btn btn-sm btn-outline-dark" target="_blank">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg>
-                            View on X
-                        </a>` : ''}
-                </div>
-            `;
-            
-            tweetContainer.appendChild(tweetCard);
+                    <div class="tweet-content">
+                        ${linkifyText(tweet.content)}
+                    </div>
+                    ${tweet.image_url ? `<div class="tweet-image mt-2 mb-2">
+                        <a href="${tweet.image_url}" target="_blank">
+                            <img src="${tweet.image_url}" alt="Tweet image" class="img-fluid rounded" style="max-height: 200px;">
+                        </a>
+                    </div>` : ''}
+                    <div class="tweet-stats">
+                        <span title="Likes"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg> ${formatNumber(tweet.likes)}</span>
+                        <span title="Retweets"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg> ${formatNumber(tweet.retweets)}</span>
+                        <span title="Replies"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg> ${formatNumber(tweet.replies)}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <div>
+                            <span class="tweet-badge ${sentimentClass}">${tweet.predicted_sentiment}</span>
+                            <span class="confidence-badge">${parseFloat(tweet.confidence).toFixed(1)}%</span>
+                        </div>
+                        ${tweet.tweet_url ? `
+                            <a href="${tweet.tweet_url}" class="btn btn-sm btn-outline-dark" target="_blank">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg>
+                                View on X
+                            </a>` : ''}
+                    </div>
+                `;
+                
+                tweetContainer.appendChild(tweetCard);
+            }
         }
-    }
 
     // Function to create sentiment by hashtag chart
     function createSentimentByHashtagChart(hashtagSentimentData) {
@@ -2084,30 +2095,55 @@
     // Make links, hashtags and mentions clickable
     function linkifyText(text) {
         if (!text) return '';
-        
+            
         // URL pattern
         const urlPattern = /https?:\/\/[^\s]+/g;
         // Hashtag pattern
         const hashtagPattern = /#(\w+)/g;
         // Mention pattern
         const mentionPattern = /@(\w+)/g;
-        
+            
         // Replace URLs with clickable links
         let processedText = text.replace(urlPattern, url => 
             `<a href="${url}" target="_blank">${url.length > 30 ? url.substring(0, 27) + '...' : url}</a>`
         );
-        
+            
         // Replace hashtags with clickable links
         processedText = processedText.replace(hashtagPattern, (match, hashtag) => 
             `<a href="https://twitter.com/hashtag/${hashtag}" target="_blank" class="hashtag-link">${match}</a>`
         );
-        
-        // Replace mentions with clickable links
+            
+            // Replace mentions with clickable links
         processedText = processedText.replace(mentionPattern, (match, username) => 
             `<a href="https://twitter.com/${username}" target="_blank" class="mention-link">${match}</a>`
-        );
-        
+         );
+            
         return processedText;
+    }
+
+    // Fungsi untuk load data dari document script
+    function loadDataFromScript() {
+        const dataScript = document.getElementById('analysis-data');
+        if (dataScript) {
+            try {
+                const analysisData = JSON.parse(dataScript.textContent);
+                console.log("Loaded data from script tag");                    
+                // Set tweet data untuk filtering
+                if (analysisData && analysisData.tweets) {
+                    allTweets = analysisData.tweets;
+                    filteredTweets = [...allTweets];
+                    console.log("Loaded tweets from script:", allTweets.length);                        
+                    // Initialize filter and display
+                    filterAndDisplayTweets();
+                } else {
+                    console.warn("No tweets found in analysis data");
+                }
+            } catch (error) {
+                console.error("Error loading data from script:", error);
+            }
+        } else {
+            console.warn("No analysis-data script found");
+        }
     }
 
     // Perbaikan untuk fungsi generateTopicButtons di view.html
@@ -2278,34 +2314,32 @@
     const downloadReportBtn = document.getElementById('download-report-btn');
     if (downloadReportBtn) {
         downloadReportBtn.addEventListener('click', function(e) {
-            // Menambahkan parameter ID analisis ke URL
+            // Prevent default action
+            e.preventDefault();                
+            // Get analysis ID from the URL
             const urlParts = window.location.pathname.split('/');
-            const analysisId = urlParts[urlParts.length - 1];
-            
-            if (analysisId && !isNaN(analysisId)) {
-                // Jika URL saat ini sudah berisi parameter query, tambahkan parameter id
-                if (this.href.includes('?')) {
-                    this.href += `&id=${analysisId}`;
-                } else {
-                    this.href += `?id=${analysisId}`;
-                }
-            }
-            
-            // Tambahkan loading state selama proses download
+            const analysisId = urlParts[urlParts.length - 1];                
+            if (!analysisId || isNaN(analysisId)) {
+                console.error("Could not find valid analysis ID in URL");
+                return;
+            }                
+            console.log("Analysis ID for download:", analysisId);                
+            // Update button text to show loading
             this.innerHTML = `
                 <div class="spinner-border spinner-border-sm me-2" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
                 Menyiapkan Laporan...
-            `;
-            
-            // Kembalikan tampilan semula setelah beberapa saat
+            `;                
+            // Redirect to download report with the correct ID
+            window.location.href = `/download_report?id=${analysisId}`;                
+            // Restore button after a delay
             setTimeout(() => {
                 this.innerHTML = `
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="7 10 12 15 17 10"></polyline>
-                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
                     </svg>
                     Unduh Report
                 `;
@@ -2315,11 +2349,159 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         // Set up tab switching behavior to ensure data is loaded properly
-        const resultTabs = document.querySelectorAll('#result-tabs button');
-
         const chatbotInput = document.getElementById('chatbot-input');
         const chatbotSend = document.getElementById('chatbot-send');
         const chatbotTopicButtons = document.getElementById('chatbot-topic-buttons');
+
+        const sentimentFilter = document.getElementById('sentiment-filter');
+        const tweetSearch = document.getElementById('tweet-search');
+        const itemsPerPage = document.getElementById('items-per-page');
+        
+        console.log("DOM Content Loaded. Setting up filter event listeners...");
+        
+        // Set up event listeners pada filter
+        if (sentimentFilter) {
+            console.log("Setting up sentiment filter event listener");
+            sentimentFilter.addEventListener('change', function() {
+                console.log("Sentiment filter changed to:", this.value);
+                filterTweets();
+            });
+        }
+        
+        if (itemsPerPage) {
+            console.log("Setting up items per page event listener");
+            itemsPerPage.addEventListener('change', function() {
+                console.log("Items per page changed to:", this.value);
+                const newPerPage = parseInt(this.value);
+                if (!isNaN(newPerPage) && newPerPage > 0) {
+                    tweetsPerPage = newPerPage;
+                    currentPage = 1;
+                    updatePagination();
+                    displayTweets();
+                }
+            });
+        }
+        
+        if (tweetSearch) {
+            console.log("Setting up tweet search event listener");
+            tweetSearch.addEventListener('input', function() {
+                console.log("Search query changed to:", this.value);
+                searchQuery = this.value.trim().toLowerCase();
+                currentPage = 1;
+                filterTweets();
+            });
+        }
+        
+        // Fungsi filter yang diperbaiki
+        function filterTweets() {
+            if (!allTweets || allTweets.length === 0) {
+                console.warn("No tweets available to filter");
+                return;
+            }
+            
+            console.log("Filtering tweets...");
+            console.log("All tweets count:", allTweets.length);
+            
+            // Get selected filter values
+            const selectedSentiment = sentimentFilter ? sentimentFilter.value : 'all';
+            console.log("Selected sentiment:", selectedSentiment);
+            
+            // Apply sentiment filter
+            let tempFilteredTweets = [...allTweets];
+            
+            if (selectedSentiment !== 'all') {
+                tempFilteredTweets = tempFilteredTweets.filter(tweet => {
+                    return tweet.predicted_sentiment === selectedSentiment;
+                });
+            }
+            
+            // Apply search filter if present
+            if (searchQuery) {
+                tempFilteredTweets = tempFilteredTweets.filter(tweet => {
+                    return (
+                        (tweet.content && tweet.content.toLowerCase().includes(searchQuery)) || 
+                        (tweet.username && tweet.username.toLowerCase().includes(searchQuery))
+                    );
+                });
+            }
+            
+            // Update filtered tweets
+            filteredTweets = tempFilteredTweets;
+            console.log("Filtered tweets count:", filteredTweets.length);
+            
+            // Reset to page 1 and update display
+            currentPage = 1;
+            updatePagination();
+            displayTweets();
+        }
+        
+        // Fetch data and setup tabs when switching
+        const resultTabs = document.querySelectorAll('#result-tabs button');
+        resultTabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                const targetId = this.getAttribute('data-bs-target');
+                
+                // When switching to tweets tab, ensure tweet list is initialized
+                if (targetId === '#tweets-content') {
+                    console.log("Switched to tweets tab. Checking data...");
+                    
+                    // If we have tweets data but filter isn't initialized, set it up now
+                    if (!allTweets || allTweets.length === 0) {
+                        loadDataFromScript();
+                    } else {
+                        // Re-apply filter jika data sudah dimuat
+                        filterAndDisplayTweets();
+                    }
+                }
+            });
+        });
+
+        const downloadReportBtn = document.getElementById('download-report-btn');
+        if (downloadReportBtn) {
+            console.log("Setting up download report button");
+            
+            downloadReportBtn.addEventListener('click', function(e) {
+                e.preventDefault(); // Prevent default navigation
+                
+                // Get the analysis ID from the URL pathname
+                const urlParts = window.location.pathname.split('/');
+                const analysisId = urlParts[urlParts.length - 1];
+                
+                if (!analysisId || isNaN(analysisId)) {
+                    console.error("Could not extract a valid analysis ID from URL");
+                    return;
+                }
+                
+                console.log("Analysis ID for download:", analysisId);
+                
+                // Create the download URL with the analysis ID
+                const downloadUrl = `/download_report?id=${analysisId}`;
+                
+                // Update button UI
+                this.innerHTML = `
+                    <div class="spinner-border spinner-border-sm me-2" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    Menyiapkan Laporan...
+                `;
+                
+                // Navigate to the download URL
+                window.location.href = downloadUrl;
+                
+                // Reset button after a delay
+                setTimeout(() => {
+                    this.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Unduh Report
+                    `;
+                }, 3000);
+            });
+        }
+        
         
         if (chatbotTopicButtons && (!chatbotTopicButtons.hasChildNodes() || chatbotTopicButtons.children.length === 0)) {
             // Coba ambil data dari analysis-data script
