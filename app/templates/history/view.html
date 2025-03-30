@@ -10,6 +10,7 @@
             <h2 class="card-title mb-0 ms-2">Hasil Analisis Sentimen</h2>
         </div>
         <div>
+            <!-- Perbaikan link download report dengan ID di URL secara langsung -->
             <a href="{{ url_for('analysis.download_report') }}?id={{ analysis.id }}" id="download-report-btn" class="download-report-btn">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -2312,7 +2313,6 @@
         });
     }
 
-    // Initiate tab switching behavior with proper data loading
     document.addEventListener('DOMContentLoaded', function() {
         // Set up tab switching behavior to ensure data is loaded properly
         const resultTabs = document.querySelectorAll('#result-tabs button');
@@ -2409,4 +2409,5 @@
         }
     });
 </script>
+
 {% endblock %}
