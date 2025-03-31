@@ -553,22 +553,92 @@ def filter_tweets():
 @analysis_bp.route('/download_report', methods=['GET'])
 @login_required
 def download_report():
-    # Cek apakah ada data analisis di session
-    if 'analysis_file' not in session or 'analysis_context' not in session:
-        flash("Tidak ada data analisis yang tersedia. Silakan upload file CSV terlebih dahulu.", "warning")
-        return redirect(url_for('main.input_data'))
+    """Endpoint untuk mengunduh laporan analisis dalam format PDF"""
+    # Cek apakah ada parameter id dari request
+    analysis_id = request.args.get('id')
     
-    # Ambil data analisis dari file
-    file_path = session.get('analysis_file')
+    # Jika ada parameter id, gunakan untuk mengambil data spesifik
+    if analysis_id:
+        try:
+            # Ambil analisis berdasarkan ID
+            analysis = Analysis.query.get_or_404(int(analysis_id))
+            
+            # Pastikan user punya akses
+            if analysis.user_id != current_user.id:
+                flash("Tidak memiliki akses ke analisis ini", "error")
+                return redirect(url_for('history.index'))
+                
+            # Ambil data analisis
+            analysis_data = AnalysisData.query.filter_by(analysis_id=analysis.id).first()
+            if not analysis_data:
+                flash("Data analisis tidak ditemukan", "error")
+                return redirect(url_for('history.index'))
+                
+            # Gunakan data dari analisis untuk membuat laporan
+            file_path = analysis_data.file_path
+            
+            # Buat analysis_context dari data analisis
+            analysis_context = {
+                'title': analysis.title,
+                'description': analysis.description or '',
+                'total_tweets': analysis.total_tweets,
+                'positive_count': analysis.positive_count,
+                'neutral_count': analysis.neutral_count,
+                'negative_count': analysis.negative_count,
+                'positive_percent': analysis.positive_percent,
+                'neutral_percent': analysis.neutral_percent,
+                'negative_percent': analysis.negative_percent
+            }
+            
+            # Tambahkan top hashtags dan topics jika tersedia di data analisis
+            try:
+                data_json = analysis_data.get_data()
+                
+                # Ambil top_hashtags
+                if 'top_hashtags' in data_json:
+                    top_hashtags = []
+                    for hashtag in data_json['top_hashtags'][:5]:
+                        if isinstance(hashtag, dict) and 'tag' in hashtag:
+                            top_hashtags.append(hashtag['tag'])
+                        elif isinstance(hashtag, str):
+                            top_hashtags.append(hashtag)
+                    analysis_context['top_hashtags'] = top_hashtags
+                
+                # Ambil top topics
+                if 'topics' in data_json:
+                    top_topics = []
+                    for topic in data_json['topics'][:5]:
+                        if isinstance(topic, dict) and 'topic' in topic:
+                            top_topics.append(topic['topic'])
+                        elif isinstance(topic, str):
+                            top_topics.append(topic)
+                    analysis_context['top_topics'] = top_topics
+            except Exception as e:
+                current_app.logger.error(f"Error saat mengambil detail hashtag/topics: {e}")
+                # Jika gagal, tetap gunakan analisis tanpa data tambahan
+                analysis_context['top_hashtags'] = []
+                analysis_context['top_topics'] = []
+            
+        except Exception as e:
+            flash(f"Error: {str(e)}", "error")
+            return redirect(url_for('history.index'))
+    else:
+        # Gunakan data dari session (perilaku asli)
+        if 'analysis_file' not in session or 'analysis_context' not in session:
+            flash("Tidak ada data analisis yang tersedia. Silakan upload file CSV terlebih dahulu.", "warning")
+            return redirect(url_for('main.input_data'))
+        
+        # Ambil data analisis dari file
+        file_path = session.get('analysis_file')
+        analysis_context = session.get('analysis_context')
+    
+    # Validasi file path
     if not os.path.exists(file_path):
         flash("File analisis tidak ditemukan.", "error")
         return redirect(url_for('main.input_data'))
     
     # Baca data analisis
     analysis_df = pd.read_csv(file_path)
-    
-    # Ambil konteks analisis dari session
-    analysis_context = session.get('analysis_context')
     
     # Siapkan buffer untuk PDF
     buffer = BytesIO()
@@ -783,6 +853,15 @@ def download_report():
     
     elements.append(Paragraph("Temuan Utama:", heading3_style))
     
+    # Ambil top topics dan hashtags jika tersedia di context
+    top_topics_text = "belum teridentifikasi"
+    if 'top_topics' in analysis_context and analysis_context['top_topics']:
+        top_topics_text = ", ".join(analysis_context['top_topics'][:3])
+    
+    top_hashtags_text = "belum teridentifikasi"
+    if 'top_hashtags' in analysis_context and analysis_context['top_hashtags']:
+        top_hashtags_text = ", ".join(analysis_context['top_hashtags'][:3])
+    
     findings_text = f"""
     • Dari total {analysis_context['total_tweets']} tweets yang dianalisis, <b>{pos_percent}%</b> memiliki 
       sentimen positif, <b>{neu_percent}%</b> netral, dan <b>{neg_percent}%</b> negatif.<br/><br/>
@@ -791,9 +870,9 @@ def download_report():
       menunjukkan bahwa publik secara umum memiliki pandangan {'positif' if dominant == 'Positif' else
       'netral' if dominant == 'Netral' else 'negatif'} terhadap "{analysis_context['title']}".<br/><br/>
       
-    • Topik-topik utama yang sering dibicarakan meliputi: {', '.join(analysis_context['top_topics'][:3])}.<br/><br/>
+    • Topik-topik utama yang sering dibicarakan meliputi: {top_topics_text}.<br/><br/>
     
-    • Hashtag populer yang sering digunakan dalam tweets meliputi: {', '.join(analysis_context['top_hashtags'][:3])}.<br/><br/>
+    • Hashtag populer yang sering digunakan dalam tweets meliputi: {top_hashtags_text}.<br/><br/>
     """
     elements.append(Paragraph(findings_text, normal_style))
     
@@ -914,10 +993,15 @@ def download_report():
     """
     elements.append(Paragraph(topic_intro, normal_style))
     
-    if 'top_topics' in analysis_context and analysis_context['top_topics']:
+    # Get topics from analysis context
+    top_topics = []
+    if 'top_topics' in analysis_context:
+        top_topics = analysis_context['top_topics'][:8] if analysis_context['top_topics'] else []
+    
+    if top_topics:
         # Format topic list with bullet points
         topics_list = ""
-        for i, topic in enumerate(analysis_context['top_topics'][:8], 1):
+        for i, topic in enumerate(top_topics, 1):
             topics_list += f"<b>{i}.</b> {topic}<br/>"
         
         # Display topics in a box
@@ -951,11 +1035,16 @@ def download_report():
     """
     elements.append(Paragraph(hashtag_intro, normal_style))
     
-    if 'top_hashtags' in analysis_context and analysis_context['top_hashtags']:
+    # Get hashtags from analysis context
+    top_hashtags = []
+    if 'top_hashtags' in analysis_context:
+        top_hashtags = analysis_context['top_hashtags'][:8] if analysis_context['top_hashtags'] else []
+    
+    if top_hashtags:
         # Format hashtag list with bullet points
         hashtags_list = ""
-        for i, hashtag in enumerate(analysis_context['top_hashtags'][:8], 1):
-            hashtag_tag = hashtag if isinstance(hashtag, str) else hashtag.get('tag', 'Unknown')
+        for i, hashtag in enumerate(top_hashtags, 1):
+            hashtag_tag = hashtag if isinstance(hashtag, str) else 'Unknown'
             hashtags_list += f"<b>{i}.</b> {hashtag_tag}<br/>"
         
         # Display hashtags in a box
@@ -1069,6 +1158,15 @@ def download_report():
     # Kesimpulan
     elements.append(Paragraph("5.1 Kesimpulan", heading2_style))
     
+    # Get top topics and hashtags for conclusion
+    top_topics_text = "beragam topik"
+    if 'top_topics' in analysis_context and analysis_context['top_topics']:
+        top_topics_text = ", ".join(analysis_context['top_topics'][:3])
+    
+    top_hashtags_text = "beragam hashtag"
+    if 'top_hashtags' in analysis_context and analysis_context['top_hashtags']:
+        top_hashtags_text = ", ".join(analysis_context['top_hashtags'][:3])
+    
     conclusion_text = f"""
     Berdasarkan analisis sentimen terhadap {analysis_context['total_tweets']} tweets terkait 
     "{analysis_context['title']}", dapat disimpulkan bahwa:<br/><br/>
@@ -1077,9 +1175,9 @@ def download_report():
        'netral' if dominant == 'Netral' else 'negatif'} dengan persentase {pos_percent if dominant == 'Positif' 
        else neu_percent if dominant == 'Netral' else neg_percent}%.<br/><br/>
     
-    2. Topik-topik utama yang dibicarakan adalah seputar {', '.join(analysis_context['top_topics'][:3])}.<br/><br/>
+    2. Topik-topik utama yang dibicarakan adalah seputar {top_topics_text}.<br/><br/>
     
-    3. Hashtag yang paling sering digunakan adalah {', '.join(analysis_context['top_hashtags'][:3])}.<br/><br/>
+    3. Hashtag yang paling sering digunakan adalah {top_hashtags_text}.<br/><br/>
     
     4. Percakapan di media sosial X menunjukkan {'tingkat dukungan dan antusiasme yang baik' 
        if dominant == 'Positif' else 'sikap yang cenderung netral dan informatif' 
@@ -1102,10 +1200,10 @@ def download_report():
         2. <b>Manfaatkan Pendukung</b> - Identifikasi dan libatkan pendukung aktif untuk
            memperluas jangkauan pesan positif.<br/><br/>
         
-        3. <b>Gunakan Hashtag Populer</b> - Manfaatkan hashtag {', '.join(analysis_context['top_hashtags'][:2])}
+        3. <b>Gunakan Hashtag Populer</b> - Manfaatkan hashtag {top_hashtags_text}
            untuk meningkatkan visibilitas pesan.<br/><br/>
         
-        4. <b>Eksplorasi Topik Potensial</b> - Kembangkan konten seputar {', '.join(analysis_context['top_topics'][:2])}
+        4. <b>Eksplorasi Topik Potensial</b> - Kembangkan konten seputar {top_topics_text}
            yang mendapat respons positif.<br/><br/>
         
         5. <b>Pantau Secara Berkala</b> - Lakukan analisis sentimen secara berkala untuk
