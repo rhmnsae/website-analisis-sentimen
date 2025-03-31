@@ -1045,10 +1045,192 @@
             
             // Update pagination
             updatePagination();
-            
+            setupDownloadReportButton
             // Display current page
             displayTweets();
         }
+
+
+
+    // Fungsi untuk memastikan filter sentimen berfungsi
+    function fixSentimentFilter() {
+        const sentimentFilter = document.getElementById('sentiment-filter');
+        if (sentimentFilter) {
+            // Hapus event listener sebelumnya (jika ada) untuk mencegah duplikasi
+            sentimentFilter.removeEventListener('change', handleSentimentChange);
+            // Tambahkan event listener baru
+            sentimentFilter.addEventListener('change', handleSentimentChange);
+            console.log("Filter sentimen berhasil diperbaiki");
+        } else {
+            console.error("Element sentiment-filter tidak ditemukan");
+        }
+    }
+
+    // Handler untuk perubahan filter sentimen
+    function handleSentimentChange() {
+        console.log("Filter sentimen berubah ke:", this.value);
+        currentPage = 1;
+        filterAndDisplayTweets();
+    }
+
+    // Fungsi untuk memperbaiki pencarian tweet
+    function fixTweetSearch() {
+        const tweetSearch = document.getElementById('tweet-search');
+        if (tweetSearch) {
+            // Hapus event listener sebelumnya (jika ada)
+            tweetSearch.removeEventListener('input', handleTweetSearch);
+            // Tambahkan event listener baru
+            tweetSearch.addEventListener('input', handleTweetSearch);
+            console.log("Pencarian tweet berhasil diperbaiki");
+        } else {
+            console.error("Element tweet-search tidak ditemukan");
+        }
+    }
+
+    // Handler untuk pencarian tweet
+    function handleTweetSearch() {
+        console.log("Pencarian tweet:", this.value);
+        searchQuery = this.value.trim().toLowerCase();
+        currentPage = 1;
+        filterAndDisplayTweets();
+    }
+
+    // Fungsi untuk memperbaiki entri per halaman
+    function fixItemsPerPage() {
+        const itemsPerPage = document.getElementById('items-per-page');
+        if (itemsPerPage) {
+            // Hapus event listener sebelumnya (jika ada)
+            itemsPerPage.removeEventListener('change', handleItemsPerPage);
+            // Tambahkan event listener baru
+            itemsPerPage.addEventListener('change', handleItemsPerPage);
+            console.log("Entri per halaman berhasil diperbaiki");
+        } else {
+            console.error("Element items-per-page tidak ditemukan");
+        }
+    }
+
+    // Handler untuk perubahan entri per halaman
+    function handleItemsPerPage() {
+        console.log("Entri per halaman berubah ke:", this.value);
+        tweetsPerPage = parseInt(this.value);
+        currentPage = 1;
+        filterAndDisplayTweets();
+    }
+
+    // Perbaikan fungsi filterAndDisplayTweets untuk memastikan data dan elemen tersedia
+    function filterAndDisplayTweets() {
+        const sentimentFilter = document.getElementById('sentiment-filter');
+        const tweetContainer = document.getElementById('tweet-container');
+        
+        if (!sentimentFilter || !tweetContainer) {
+            console.error("Element filter atau container tidak ditemukan");
+            return;
+        }
+        
+        if (!allTweets || allTweets.length === 0) {
+            console.error("Data tweet tidak tersedia");
+            tweetContainer.innerHTML = '<p class="text-center text-muted my-5">Tidak ada data tweet yang tersedia.</p>';
+            return;
+        }
+        
+        const selectedSentiment = sentimentFilter.value;
+        console.log("Memfilter berdasarkan sentimen:", selectedSentiment);
+        
+        // Filter berdasarkan sentimen
+        let tempFilteredTweets = [...allTweets];
+        
+        if (selectedSentiment !== 'all') {
+            tempFilteredTweets = tempFilteredTweets.filter(tweet => tweet.predicted_sentiment === selectedSentiment);
+            console.log(`Ditemukan ${tempFilteredTweets.length} tweet dengan sentimen ${selectedSentiment}`);
+        }
+        
+        // Filter berdasarkan pencarian
+        if (searchQuery) {
+            console.log("Mencari:", searchQuery);
+            tempFilteredTweets = tempFilteredTweets.filter(tweet => {
+                if (!tweet.content && !tweet.username) return false;
+                
+                return (
+                    (tweet.content ? tweet.content.toLowerCase().includes(searchQuery) : false) || 
+                    (tweet.username ? tweet.username.toLowerCase().includes(searchQuery) : false)
+                );
+            });
+            console.log(`Ditemukan ${tempFilteredTweets.length} tweet dengan kata kunci "${searchQuery}"`);
+        }
+        
+        filteredTweets = tempFilteredTweets;
+        
+        // Update pagination
+        updatePagination();
+        
+        // Display current page
+        displayTweets();
+    }
+
+    // Perbaikan fungsi initializeFilters untuk memulai filter setelah data dimuat
+    function initializeFilters() {
+        fixSentimentFilter();
+        fixTweetSearch();
+        fixItemsPerPage();
+        
+        // Reset nilai filter ke default
+        const sentimentFilter = document.getElementById('sentiment-filter');
+        if (sentimentFilter) sentimentFilter.value = 'all';
+        
+        const tweetSearch = document.getElementById('tweet-search');
+        if (tweetSearch) tweetSearch.value = '';
+        
+        searchQuery = '';
+        currentPage = 1;
+        
+        // Re-apply filter dengan nilai default
+        filterAndDisplayTweets();
+    }
+
+    // Tambahkan event listener untuk tab tweets-tab
+    function setupTabListener() {
+        const tweetsTab = document.getElementById('tweets-tab');
+        if (tweetsTab) {
+            tweetsTab.addEventListener('click', function() {
+                console.log("Tab tweet diklik, memastikan filter berfungsi");
+                // Delay sedikit untuk memastikan tab sudah aktif
+                setTimeout(function() {
+                    initializeFilters();
+                    // Refresh tweet list jika diperlukan
+                    if (filteredTweets.length === 0 && allTweets.length > 0) {
+                        filteredTweets = [...allTweets];
+                        filterAndDisplayTweets();
+                    }
+                }, 100);
+            });
+        }
+    }
+
+    // Fungsi utama yang dipanggil saat dokumen dimuat
+    function fixFilters() {
+        console.log("Memperbaiki filter, pencarian, dan pagination...");
+        
+        // Setup tab listener untuk memastikan filter diinisialisasi saat tab aktif
+        setupTabListener();
+        
+        // Inisialisasi filter jika tab tweets sudah aktif
+        const tweetsContent = document.getElementById('tweets-content');
+        if (tweetsContent && tweetsContent.classList.contains('active')) {
+            console.log("Tab tweet sudah aktif, menginisialisasi filter...");
+            initializeFilters();
+        }
+        
+        // Pastikan event listener dipasang dengan benar di DOMContentLoaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeFilters);
+        } else {
+            // DOMContentLoaded sudah terjadi
+            initializeFilters();
+        }
+    }
+
+    // Panggil fungsi utama
+    fixFilters();
 
     // Function to update pagination
     function updatePagination() {
@@ -2310,30 +2492,78 @@
         chatbotTopicButtons.appendChild(messageDiv);
     }
 
-    // Set up event handlers for the download report button
-    const downloadReportBtn = document.getElementById('download-report-btn');
-    if (downloadReportBtn) {
-        downloadReportBtn.addEventListener('click', function(e) {
-            // Prevent default action
-            e.preventDefault();                
-            // Get analysis ID from the URL
-            const urlParts = window.location.pathname.split('/');
-            const analysisId = urlParts[urlParts.length - 1];                
-            if (!analysisId || isNaN(analysisId)) {
-                console.error("Could not find valid analysis ID in URL");
+    function setupDownloadReportButton() {
+        const downloadReportBtn = document.getElementById('download-report-btn');
+        if (!downloadReportBtn) return; // Keluar jika tombol tidak ditemukan
+        
+        console.log("Setting up download report button");
+        
+        // Hapus event listener yang mungkin sudah ada untuk mencegah duplikasi
+        const newBtn = downloadReportBtn.cloneNode(true);
+        downloadReportBtn.parentNode.replaceChild(newBtn, downloadReportBtn);
+        
+        // Tambahkan event listener baru
+        newBtn.addEventListener('click', function(e) {
+            e.preventDefault(); // Mencegah navigasi default
+            
+            // Ambil ID analisis dari URL
+            let analysisId;
+            const urlParts = window.location.pathname.split('/').filter(part => part.length > 0);
+            
+            // Coba ekstrak ID dari URL (biasanya bagian terakhir dari path)
+            for (let i = urlParts.length - 1; i >= 0; i--) {
+                if (!isNaN(urlParts[i]) && urlParts[i].length > 0) {
+                    analysisId = urlParts[i];
+                    break;
+                }
+            }
+            
+            // Jika tidak bisa mendapatkan ID dari URL, coba dari href tombol
+            if (!analysisId) {
+                const hrefParts = this.getAttribute('href').split('?');
+                if (hrefParts.length > 1) {
+                    const hrefParams = new URLSearchParams(hrefParts[1]);
+                    analysisId = hrefParams.get('id');
+                }
+            }
+            
+            // Jika masih tidak bisa mendapatkan ID, coba dari data script
+            if (!analysisId) {
+                try {
+                    const dataScript = document.getElementById('analysis-data');
+                    if (dataScript) {
+                        const analysisData = JSON.parse(dataScript.textContent);
+                        if (analysisData && analysisData.id) {
+                            analysisId = analysisData.id;
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error extracting ID from analysis data:", error);
+                }
+            }
+            
+            // Keluar jika tidak mendapatkan ID yang valid
+            if (!analysisId) {
+                console.error("Could not extract a valid analysis ID");
+                alert("Maaf, tidak dapat menemukan ID analisis untuk mengunduh laporan.");
                 return;
-            }                
-            console.log("Analysis ID for download:", analysisId);                
-            // Update button text to show loading
+            }
+            
+            console.log("Analysis ID for download:", analysisId);
+            
+            // Update UI tombol saat proses berlangsung
             this.innerHTML = `
                 <div class="spinner-border spinner-border-sm me-2" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
                 Menyiapkan Laporan...
-            `;                
-            // Redirect to download report with the correct ID
-            window.location.href = `/download_report?id=${analysisId}`;                
-            // Restore button after a delay
+            `;
+            
+            // Buat URL unduhan dan navigasi ke sana
+            const downloadUrl = `/download_report?id=${analysisId}`;
+            window.location.href = downloadUrl;
+            
+            // Kembalikan tombol ke tampilan semula setelah beberapa detik
             setTimeout(() => {
                 this.innerHTML = `
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2346,6 +2576,19 @@
             }, 3000);
         });
     }
+
+    // Panggil fungsi setup saat dokumen dimuat
+    document.addEventListener('DOMContentLoaded', setupDownloadReportButton);
+
+    // Juga panggil setup jika DOM sudah dimuat
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupDownloadReportButton);
+    } else {
+        // DOMContentLoaded sudah terjadi
+        setupDownloadReportButton();
+    }
+
+
 
     document.addEventListener('DOMContentLoaded', function() {
         // Set up tab switching behavior to ensure data is loaded properly
