@@ -11,7 +11,7 @@
         </div>
         <div>
             <!-- Perbaikan link download report dengan ID di URL secara langsung -->
-            <a href="{{ url_for('analysis.download_report') }}?id={{ analysis.id }}" id="download-report-btn" class="download-report-btn">
+            <a href="{{ url_for('analysis.download_report') }}?id={{ analysis.id }}" id="download-report-btn" class="download-report-btn" data-analysis-id="{{ analysis.id }}">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                     <polyline points="7 10 12 15 17 10"></polyline>
@@ -2601,7 +2601,7 @@
         const itemsPerPage = document.getElementById('items-per-page');
         
         console.log("DOM Content Loaded. Setting up filter event listeners...");
-        
+
         // Set up event listeners pada filter
         if (sentimentFilter) {
             console.log("Setting up sentiment filter event listener");

@@ -38,8 +38,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // Cek apakah sudah ada analisis yang dilakukan
             if (!analysisResults) {
                 e.preventDefault();
-                showAlert('Silakan upload dan analisis data terlebih dahulu sebelum mengunduh laporan.', 'warning');
-            } else {
+                // showAlert('Silakan upload dan analisis data terlebih dahulu sebelum mengunduh laporan.', 'warning');
+            } 
+            
+            else {
                 // Tambahkan loading state selama proses download
                 this.innerHTML = `
                     <div class="spinner-border spinner-border-sm me-2" role="status">
@@ -61,6 +63,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 }, 3000);
             }
         });
+    }
+    
+
+        // if (window.showAlert) {
+        //     const originalShowAlert = window.showAlert;
+        //     window.showAlert = function(message, type) {
+        //         // Jika pesan adalah peringatan untuk upload dan analisis, abaikan
+        //         if (message.includes("Silakan upload dan analisis data terlebih dahulu")) {
+        //             console.log("Mengabaikan peringatan tidak perlu:", message);
+        //             return;
+        //         }
+        //         // Jika bukan, gunakan fungsi asli
+        //         return originalShowAlert(message, type);
+        //     };
+        // }
+        
+        setupDownloadReportButton();
+
+    // Juga panggil setup jika DOM sudah dimuat
+    if (document.readyState !== 'loading') {
+        setupDownloadReportButton();
     }
     
     // Global variables
