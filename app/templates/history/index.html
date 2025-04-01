@@ -18,11 +18,17 @@
         <!-- Search and Filter section -->
         <div class="row mb-4">
             <div class="col-md-3 mb-2">
+                <label for="sentiment-filter" class="form-label fw-bold">
+                Cari judul
+                </label>
                 <div class="input-group">
                     <input type="text" id="search-input" class="form-control" placeholder="Cari berdasarkan judul..." value="{{ search_query }}">
                 </div>
             </div>
             <div class="col-md-3 mb-2">
+                <label for="sentiment-filter" class="form-label fw-bold">
+                Filter berdasarkan Sentimen
+                </label>
                 <select class="form-select" id="filter-sentiment">
                     <option value="all" {% if request.args.get('sentiment', 'all') == 'all' %}selected{% endif %}>Semua Sentimen</option>
                     <option value="positive" {% if request.args.get('sentiment') == 'positive' %}selected{% endif %}>Dominan Positif</option>
@@ -31,6 +37,9 @@
                 </select>
             </div>
             <div class="col-md-3 mb-2">
+                <label for="sentiment-filter" class="form-label fw-bold">
+                Urut berdasarkan
+                </label>
                 <select class="form-select" id="sort-by">
                     <option value="date-desc" {% if request.args.get('sort', 'date-desc') == 'date-desc' %}selected{% endif %}>Terbaru</option>
                     <option value="date-asc" {% if request.args.get('sort') == 'date-asc' %}selected{% endif %}>Terlama</option>
@@ -39,11 +48,14 @@
                 </select>
             </div>
             <div class="col-md-3 mb-2">
+                <label for="sentiment-filter" class="form-label fw-bold">
+                Entri per halaman
+                </label>
                 <select class="form-select" id="items-per-page">
-                    <option value="10" {% if request.args.get('per_page', '10') == '10' %}selected{% endif %}>10 entri per halaman</option>
-                    <option value="25" {% if request.args.get('per_page') == '25' %}selected{% endif %}>25 entri per halaman</option>
-                    <option value="50" {% if request.args.get('per_page') == '50' %}selected{% endif %}>50 entri per halaman</option>
-                    <option value="100" {% if request.args.get('per_page') == '100' %}selected{% endif %}>100 entri per halaman</option>
+                    <option value="10" {% if request.args.get('per_page', '10') == '10' %}selected{% endif %}>10</option>
+                    <option value="25" {% if request.args.get('per_page') == '25' %}selected{% endif %}>25</option>
+                    <option value="50" {% if request.args.get('per_page') == '50' %}selected{% endif %}>50</option>
+                    <option value="100" {% if request.args.get('per_page') == '100' %}selected{% endif %}>100</option>
                 </select>
             </div>
         </div>
