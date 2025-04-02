@@ -195,6 +195,34 @@ nav a svg {
     border-bottom: 2px solid var(--primary-color);
 }
 
+.accordion-button {
+    background-color: #f8f9fa !important; /* Warna latar belakang normal */
+    color: #333 !important; /* Warna teks normal */
+    border-color: #ddd !important; /* Warna border normal */
+}
+
+.accordion-button:active, 
+.accordion-button:focus {
+    background-color: #d6d6d6 !important; /* Warna abu-abu saat diklik */
+    color: #333 !important; /* Warna teks lebih gelap */
+    border-color: #b3b3b3 !important; /* Warna border */
+    box-shadow: none !important; /* Menghapus efek glow biru */
+    outline: none !important; /* Menghapus garis biru */
+}
+
+/* Menghapus efek seleksi teks (highlight) */
+.accordion-button::selection {
+    background-color: transparent !important; /* Menghapus seleksi warna */
+    color: #333 !important;
+}
+
+/* Untuk browser yang menggunakan efek highlight berbasis OS */
+.accordion-button::-moz-selection {
+    background-color: transparent !important;
+    color: #333 !important;
+}
+
+
 /* Stats Cards */
 .stats-card {
     padding: 1.5rem;

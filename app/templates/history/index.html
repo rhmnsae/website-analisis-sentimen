@@ -85,9 +85,9 @@
                                         <span class="text-muted small">-</span>
                                     {% endif %}
                                 </td>
-                                <td>{{ analysis.created_at.strftime('%d %b %Y') }}<br>
-                                    <small class="text-muted">{{ analysis.created_at.strftime('%H:%M') }}</small>
-                                </td>
+                                <td>{{ analysis.created_at_local.strftime('%d %b %Y') }}<br>
+                                    <small class="text-muted">{{ analysis.created_at_local.strftime('%H:%M') }} WIB</small>
+                                </td>                                
                                 <td>{{ analysis.total_tweets }}</td>
                                 <td>
                                     <div class="d-flex align-items-center">

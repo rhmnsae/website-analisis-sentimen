@@ -3,8 +3,14 @@ from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import json
+import pytz
 
 db = SQLAlchemy()
+
+# Definisi zona waktu Indonesia (WIB, WITA, atau WIT)
+INDONESIA_TZ = pytz.timezone('Asia/Jakarta')  # WIB (GMT+7)
+# Untuk WITA gunakan: pytz.timezone('Asia/Makassar')
+# Untuk WIT gunakan: pytz.timezone('Asia/Jayapura')
 
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
@@ -39,7 +45,12 @@ class Analysis(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     data = db.relationship('AnalysisData', backref='analysis', uselist=False, lazy=True)
-    
+
+    @property
+    def created_at_local(self):
+        """Mengembalikan waktu dalam zona waktu Indonesia."""
+        return self.created_at.replace(tzinfo=pytz.utc).astimezone(INDONESIA_TZ)
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -52,7 +63,7 @@ class Analysis(db.Model):
             'positive_percent': self.positive_percent,
             'neutral_percent': self.neutral_percent,
             'negative_percent': self.negative_percent,
-            'created_at': self.created_at.strftime('%d %B %Y, %H:%M')
+            'created_at': self.created_at_local.strftime('%d %B %Y, %H:%M WIB')
         }
     
     def __repr__(self):

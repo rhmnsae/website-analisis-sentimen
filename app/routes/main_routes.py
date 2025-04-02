@@ -39,7 +39,35 @@ def hasil_analisis():
     
     return render_template('hasil_analisis.html')
 
+@main_bp.route('/riwayat')
+@login_required
+def riwayat():
+    
+    if 'analysis_file' in session:
+        session.pop('analysis_file')
+    if 'analysis_context' in session:
+        session.pop('analysis_context')
+        
+    return render_template('history/index.html')
+
+@main_bp.route('/lihat')
+@login_required
+def lihat():
+    
+    if 'analysis_file' in session:
+        session.pop('analysis_file')
+    if 'analysis_context' in session:
+        session.pop('analysis_context')
+        
+    return render_template('history/view.html')
+
 @main_bp.route('/profile')
 @login_required
 def profile():
+    
+    if 'analysis_file' in session:
+        session.pop('analysis_file')
+    if 'analysis_context' in session:
+        session.pop('analysis_context')
+        
     return render_template('profile.html')
