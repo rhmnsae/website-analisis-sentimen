@@ -10,7 +10,7 @@
             <h2 class="card-title mb-0 ms-2">Hasil Analisis Sentimen</h2>
         </div>
         <div>
-            <!-- Perbaikan link download report dengan ID di URL secara langsung -->
+            <!-- link download report dengan ID di URL secara langsung -->
             <a href="{{ url_for('analysis.download_report') }}?id={{ analysis.id }}" id="download-report-btn" class="download-report-btn" data-analysis-id="{{ analysis.id }}">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -1117,7 +1117,7 @@
         filterAndDisplayTweets();
     }
 
-    // Perbaikan fungsi filterAndDisplayTweets untuk memastikan data dan elemen tersedia
+    //fungsi filterAndDisplayTweets untuk memastikan data dan elemen tersedia
     function filterAndDisplayTweets() {
         const sentimentFilter = document.getElementById('sentiment-filter');
         const tweetContainer = document.getElementById('tweet-container');
@@ -1167,7 +1167,7 @@
         displayTweets();
     }
 
-    // Perbaikan fungsi initializeFilters untuk memulai filter setelah data dimuat
+    //fungsi initializeFilters untuk memulai filter setelah data dimuat
     function initializeFilters() {
         fixSentimentFilter();
         fixTweetSearch();
@@ -1187,7 +1187,7 @@
         filterAndDisplayTweets();
     }
 
-    // Tambahkan event listener untuk tab tweets-tab
+    // event listener untuk tab tweets-tab
     function setupTabListener() {
         const tweetsTab = document.getElementById('tweets-tab');
         if (tweetsTab) {
@@ -1391,7 +1391,6 @@
                     <div class="d-flex justify-content-between align-items-center mt-2">
                         <div>
                             <span class="tweet-badge ${sentimentClass}">${tweet.predicted_sentiment}</span>
-                            <span class="confidence-badge">${parseFloat(tweet.confidence).toFixed(1)}%</span>
                         </div>
                         ${tweet.tweet_url ? `
                             <a href="${tweet.tweet_url}" class="btn btn-sm btn-outline-dark" target="_blank">
@@ -2328,7 +2327,7 @@
         }
     }
 
-    // Perbaikan untuk fungsi generateTopicButtons di view.html
+    // untuk fungsi generateTopicButtons di view.html
 
     function generateTopicButtons(data) {
         const chatbotTopicButtons = document.getElementById('chatbot-topic-buttons');
@@ -2391,7 +2390,6 @@
             'default': ''
         };
         
-        // PERBAIKAN UTAMA: Kita akan menggunakan flag untuk mencegah duplikasi pengiriman pesan
         // dan memastikan bahwa click handler dibuat sekali saja
         Array.from(topics).forEach(topic => {
             const button = document.createElement('button');

@@ -122,7 +122,7 @@ def acquire_user_lock(user_id, timeout=10):  # Kurangi timeout ke 10 detik
         # Ini membantu mengatasi skenario dimana lock sebelumnya tidak dilepaskan dengan benar
         lock_obj = UserLock(user_id)
         
-        # PERBAIKAN: Jika parameter force_cleanup ada di URL, bersihkan lock
+        # Jika parameter force_cleanup ada di URL, bersihkan lock
         if request and request.args.get('force_cleanup', 'false').lower() == 'true':
             lock_obj.force_cleanup()
             logger.info(f"Lock untuk user {user_id} dibersihkan dari parameter URL")
@@ -145,7 +145,7 @@ def acquire_user_lock(user_id, timeout=10):  # Kurangi timeout ke 10 detik
                     # meskipun gagal menghapus file
                     return True
             else:
-                # PERBAIKAN: Jika lock belum terlalu lama (kurang dari 30 detik), coba paksa hapus
+                # Jika lock belum terlalu lama (kurang dari 30 detik), coba paksa hapus
                 if current_time - file_mtime < 30:
                     try:
                         os.remove(lock_file)
@@ -231,7 +231,7 @@ class UserLockRequired:
         # Bersihkan lock jika diminta
         check_force_cleanup_parameter(user_id)
         
-        # PERBAIKAN: Auto cleanup lock yang berusia lebih dari 3 menit
+        # Auto cleanup lock yang berusia lebih dari 3 menit
         lock_obj = UserLock(user_id)
         if os.path.exists(lock_obj.lock_file):
             file_mtime = os.path.getmtime(lock_obj.lock_file)
@@ -251,7 +251,7 @@ class UserLockRequired:
             logger.info(f"Status lock untuk user {user_id}: {'Berhasil' if lock_acquired else 'Gagal'}")
             
             if not lock_acquired:
-                # PERBAIKAN: Buat response dengan informasi lebih detail
+                # Buat response dengan informasi lebih detail
                 lock_duration = 0
                 try:
                     if os.path.exists(lock_obj.lock_file):
@@ -297,7 +297,7 @@ class UserLockRequired:
 def user_lock_required(f):
     return UserLockRequired(f)
 
-# Perbaikan fungsi untuk acquire lock
+#fungsi untuk acquire lock
 def acquire_user_lock(user_id, timeout=10):  # Kurangi timeout ke 10 detik
     """
     Mencoba mendapatkan lock untuk user tertentu dengan retry
@@ -314,7 +314,7 @@ def acquire_user_lock(user_id, timeout=10):  # Kurangi timeout ke 10 detik
         # Ini membantu mengatasi skenario dimana lock sebelumnya tidak dilepaskan dengan benar
         lock_obj = UserLock(user_id)
         
-        # PERBAIKAN: Jika parameter force_cleanup ada di URL, bersihkan lock
+        # Jika parameter force_cleanup ada di URL, bersihkan lock
         if request and request.args.get('force_cleanup', 'false').lower() == 'true':
             lock_obj.force_cleanup()
             logger.info(f"Lock untuk user {user_id} dibersihkan dari parameter URL")
@@ -337,7 +337,7 @@ def acquire_user_lock(user_id, timeout=10):  # Kurangi timeout ke 10 detik
                     # meskipun gagal menghapus file
                     return True
             else:
-                # PERBAIKAN: Jika lock belum terlalu lama (kurang dari 30 detik), coba paksa hapus
+                # Jika lock belum terlalu lama (kurang dari 30 detik), coba paksa hapus
                 if current_time - file_mtime < 30:
                     try:
                         os.remove(lock_file)

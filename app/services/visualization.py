@@ -26,7 +26,7 @@ def create_sentiment_plot(df):
         'Negatif': '#000000'   # Abu-abu gelap
     }
     
-    # Perbaikan untuk mengatasi FutureWarning: menggunakan hue dan legend=False
+    #untuk mengatasi FutureWarning: menggunakan hue dan legend=False
     ax = sns.countplot(
         data=df, 
         x='predicted_sentiment',

@@ -633,7 +633,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="d-flex justify-content-between align-items-center mt-2">
                     <div>
                         <span class="tweet-badge ${sentimentClass}">${tweet.predicted_sentiment}</span>
-                        <span class="confidence-badge">${parseFloat(tweet.confidence).toFixed(1)}%</span>
                     </div>
                     ${tweet.tweet_url ? `
                         <a href="${tweet.tweet_url}" class="btn btn-sm btn-outline-dark" target="_blank">
