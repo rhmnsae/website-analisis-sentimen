@@ -76,7 +76,7 @@ def predict_sentiments(file_path):
     # Siapkan hasil
     results = []
     confidences = []
-    sentiment_labels = ['Negatif', 'Netral', 'Positif']
+    sentiment_labels = ['Positif', 'Netral', 'Negatif']
     
     print(f"Melakukan prediksi sentimen untuk {len(df)} tweets...")
     
@@ -296,8 +296,8 @@ def get_top_users(df):
     user_counts = df.groupby('username').size().reset_index(name='count')
     
     # Calculate average engagement
-    engagement_df = df.groupby('username')[['likes', 'retweets', 'replies']].mean().sum(axis=1).reset_index(name='avg_engagement')
-    user_counts = user_counts.merge(engagement_df, on='username')
+    # engagement_df = df.groupby('username')[['likes', 'retweets', 'replies']].mean().sum(axis=1).reset_index(name='avg_engagement')
+    # user_counts = user_counts.merge(engagement_df, on='username')
     
     # Get dominant sentiment for each user
     sentiment_counts = df.groupby(['username', 'predicted_sentiment']).size().reset_index(name='sentiment_count')

@@ -24,7 +24,7 @@ var/
 flask_sessions/
 
 # Model files (large files should be stored elsewhere)
-models/indobert_sentiment_best.pt
+models/model-indobert-mgb.pt
 
 # Uploaded files
 uploads/*

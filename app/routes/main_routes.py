@@ -19,7 +19,7 @@ def input_data():
     # Cek apakah model terlatih ada
     model_path = current_app.config['MODEL_PATH']
     if not os.path.exists(model_path):
-        flash("PERINGATAN: Model terlatih tidak ditemukan di path models/indobert_sentiment_best.pt. Aplikasi mungkin tidak berfungsi dengan benar.", "warning")
+        flash("PERINGATAN: Model terlatih tidak ditemukan di path models/model-indobert-mgb.pt. Aplikasi mungkin tidak berfungsi dengan benar.", "warning")
     
     # Clear any previous analysis from session
     if 'analysis_file' in session:

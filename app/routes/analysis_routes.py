@@ -1212,7 +1212,7 @@ def download_report():
         
         "Netral": f"""
         Berdasarkan dominasi sentimen netral, berikut adalah rekomendasi untuk meningkatkan
-        engagement dan menggeser sentimen ke arah yang lebih positif:<br/><br/>
+        sentimen ke arah yang lebih positif:<br/><br/>
         
         1. <b>Tingkatkan Komunikasi Nilai</b> - Perkuat pesan tentang manfaat dan nilai positif
            untuk menggeser sentimen dari netral ke positif.<br/><br/>

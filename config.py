@@ -10,7 +10,7 @@ class Config:
     SESSION_PERMANENT = True  # Ubah menjadi True
     PERMANENT_SESSION_LIFETIME = timedelta(days=30)  # Tambahkan batas waktu session 30 hari
     SESSION_USE_SIGNER = True
-    MODEL_PATH = os.path.join(MODEL_FOLDER, 'indobert_sentiment_best.pt')
+    MODEL_PATH = os.path.join(MODEL_FOLDER, 'model-indobert-mgb.pt')
     GEMINI_API_KEY = "AIzaSyCYPhQCDxpyz_MmR86v43XgKvMryx5FfQY"
     
     # Database configuration

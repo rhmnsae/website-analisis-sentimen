@@ -1730,7 +1730,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     row.innerHTML = `
                         <td><a href="https://twitter.com/${user.username}" target="_blank">@${user.username}</a></td>
                         <td>${user.count}</td>
-                        <td>${Math.round(user.avg_engagement)}</td>
                         <td><span class="${sentimentClass}">${user.dominant_sentiment}</span></td>
                     `;
                     
@@ -2009,7 +2008,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     row.innerHTML = `
                         <td><a href="https://twitter.com/${user.username}" target="_blank">@${user.username}</a></td>
                         <td>${user.count}</td>
-                        <td>${Math.round(user.avg_engagement)}</td>
                         <td><span class="${sentimentClass}">${user.dominant_sentiment}</span></td>
                     `;
                     
