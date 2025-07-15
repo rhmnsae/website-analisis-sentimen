@@ -15,7 +15,7 @@ Model ini dilatih menggunakan dataset bahasa Indonesia dan cocok untuk penelitia
 ## 📥 Download Model IndoBERT
 Anda dapat mengunduh model IndoBERT yang digunakan dalam proyek ini melalui tautan berikut:
 
-➡️ [Download IndoBERT (Google Drive)](https://drive.google.com/drive/folders/1YC3_2SEF4XJIwLGFkDqzTha-9SVs5QGw)
+➡️ [Download IndoBERT (Google Drive)](https://drive.google.com/drive/folders/1YC3_2SEF4XJIwLGFkDqzTha-9SVs5QGw?usp=sharing)
 ➡️ [Hunggingface)](https://huggingface.co/rhmnsae/indobert_saepl)
 
 ---
